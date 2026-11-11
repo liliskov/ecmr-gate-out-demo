@@ -1,0 +1,393 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn2:definitions xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:bpmn2="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:bioc="http://bpmn.io/schema/bpmn/biocolor/1.0" xmlns:color="http://www.omg.org/spec/BPMN/non-normative/color/1.0" id="ecmr-full-container-delivery" targetNamespace="http://bpmn.io/schema/bpmn" xsi:schemaLocation="http://www.omg.org/spec/BPMN/20100524/MODEL BPMN20.xsd">
+  <bpmn2:collaboration id="Collaboration_ECMR">
+    <bpmn2:documentation>The eCMR consignment note for a full container delivery on import, as one bilateral process between the issuing party and the eCMR provider. Everything that belongs to another agreement is a black-box participant reached by a message flow, not a lane: the carrier and its subcontractors live in the container import transport process, the handover at the gate in the terminal visit, and regulatory publication is the issuing party's own process with an eFTI platform of its choosing. As in the secure container release file, a step belongs to the party that takes the action; the provider recording the result is a side effect, not a step. Because the provider owns the state, every state box sits in its lane, including those caused by the issuing party.</bpmn2:documentation>
+    <bpmn2:participant id="Participant_Efti" name="eFTI platform" />
+    <bpmn2:participant id="Participant_ECMR" name="eCMR consignment note (full container delivery)" processRef="Process_ECMR" />
+    <bpmn2:participant id="Participant_Transport" name="Container import transport" />
+    <bpmn2:participant id="Participant_TerminalVisit" name="Terminal visit" />
+    <bpmn2:messageFlow id="Msg_Appointment" name="carrier / sub-carrier appointed" sourceRef="Participant_Transport" targetRef="Task_Nominate" />
+    <bpmn2:messageFlow id="Msg_AppointmentMade" name="Terminal visit [appointment made]" sourceRef="Participant_TerminalVisit" targetRef="StartEvent_Carriage" />
+    <bpmn2:messageFlow id="Msg_VisitCompleted" name="Terminal visit [completed]" sourceRef="Participant_TerminalVisit" targetRef="Task_Takeover" />
+    <bpmn2:messageFlow id="Msg_Delivered" name="container delivered" sourceRef="Participant_Transport" targetRef="Task_Delivery" />
+    <bpmn2:messageFlow id="Msg_Dataset" name="regulatory dataset" sourceRef="Task_Publish" targetRef="Participant_Efti" />
+  </bpmn2:collaboration>
+  <bpmn2:process id="Process_ECMR" isExecutable="false">
+    <bpmn2:laneSet id="LaneSet_ECMR">
+      <bpmn2:lane id="Lane_IssuingParty" name="Issuing party">
+        <bpmn2:flowNodeRef>StartEvent_Carriage</bpmn2:flowNodeRef>
+        <bpmn2:flowNodeRef>Task_Draft</bpmn2:flowNodeRef>
+        <bpmn2:flowNodeRef>Task_SignIssue</bpmn2:flowNodeRef>
+        <bpmn2:flowNodeRef>Task_Nominate</bpmn2:flowNodeRef>
+        <bpmn2:flowNodeRef>Gateway_Efti</bpmn2:flowNodeRef>
+        <bpmn2:flowNodeRef>Task_Publish</bpmn2:flowNodeRef>
+        <bpmn2:flowNodeRef>Gateway_EftiJoin</bpmn2:flowNodeRef>
+      </bpmn2:lane>
+      <bpmn2:lane id="Lane_Provider" name="eCMR provider">
+        <bpmn2:flowNodeRef>Task_Takeover</bpmn2:flowNodeRef>
+        <bpmn2:flowNodeRef>Task_Delivery</bpmn2:flowNodeRef>
+        <bpmn2:flowNodeRef>Task_Reservations</bpmn2:flowNodeRef>
+        <bpmn2:flowNodeRef>Task_Close</bpmn2:flowNodeRef>
+        <bpmn2:flowNodeRef>EndEvent_Closed</bpmn2:flowNodeRef>
+      </bpmn2:lane>
+    </bpmn2:laneSet>
+    <bpmn2:startEvent id="StartEvent_Carriage" name="Visit booked">
+      <bpmn2:documentation>Hook to the terminal visit: the appointment is made, so the container, the window and the haulier collecting it are known. The issuing party drafts the note only now - before the appointment there is nothing to carry yet.</bpmn2:documentation>
+    </bpmn2:startEvent>
+    <bpmn2:task id="Task_Draft" name="Draft consignment note">
+      <bpmn2:documentation>Parties, place of taking over and of delivery, container number, seal number, VGM, T1 reference. The provider records the draft and assigns the eCMR identifier as a side effect: it owns the note's state (design principle 4) but is not a party to the contract of carriage. Repeats freely until issuance.</bpmn2:documentation>
+      <bpmn2:dataOutputAssociation id="DataOut_Task_Draft">
+        <bpmn2:targetRef>DataRef_Task_Draft</bpmn2:targetRef>
+      </bpmn2:dataOutputAssociation>
+      <bpmn2:standardLoopCharacteristics />
+    </bpmn2:task>
+    <bpmn2:task id="Task_SignIssue" name="Sign as sender&#10;and issue">
+      <bpmn2:documentation>Applied in advance and away from the place of taking over, because on an import full container delivery the goods are handed over by the terminal and not by the sender. Issuance is the legal effect of the sender signature; the provider records it.</bpmn2:documentation>
+      <bpmn2:dataOutputAssociation id="DataOut_Task_SignIssue">
+        <bpmn2:targetRef>DataRef_Task_SignIssue</bpmn2:targetRef>
+      </bpmn2:dataOutputAssociation>
+    </bpmn2:task>
+    <bpmn2:task id="Task_Nominate" name="Nominate carrier and&#10;authorise its signer">
+      <bpmn2:documentation>Hook to the container import transport process, where the carrier is contracted and legs are subcontracted. Nothing is transferred: the issuing party stays the issuing party and each appointed haulier is added as an authorised signer, scoped to one signature at one event (design principle 8). The carrier signs when it accepts the appointment; there is no second signature at the gate. Repeats per appointment.</bpmn2:documentation>
+      <bpmn2:dataOutputAssociation id="DataOut_Task_Nominate">
+        <bpmn2:targetRef>DataRef_Task_Nominate</bpmn2:targetRef>
+      </bpmn2:dataOutputAssociation>
+      <bpmn2:standardLoopCharacteristics />
+    </bpmn2:task>
+    <bpmn2:exclusiveGateway id="Gateway_Efti" name="Publish to eFTI?" default="Flow_NoEfti" />
+    <bpmn2:task id="Task_Publish" name="Publish to chosen&#10;eFTI platform">
+      <bpmn2:documentation>Hook to the regulatory publication process (E7). The obligation sits with the economic operator and the platform is the issuing party's choice - it need not be the eCMR provider. No export step is needed: the issuing party drafted the note and already holds the data.</bpmn2:documentation>
+      <bpmn2:dataOutputAssociation id="DataOut_Task_Publish">
+        <bpmn2:targetRef>DataRef_Task_Publish</bpmn2:targetRef>
+      </bpmn2:dataOutputAssociation>
+    </bpmn2:task>
+    <bpmn2:exclusiveGateway id="Gateway_EftiJoin" />
+    <bpmn2:receiveTask id="Task_Takeover" name="Takeover recorded">
+      <bpmn2:documentation>Inbound notification, not a signature. The terminal visit's gate-out, Terminal visit [completed], tells the provider the carrier has taken over the container; the interchange receipt comes with it and is attached as the evidence of that moment, with any reservation it records on seal and container condition. The state matters legally - the carrier is liable from taking over to delivery (CMR art. 17) - but at a terminal nobody is present to sign for it: the sender is absent and a sealed box cannot be inspected, so the terminal's receipt is better evidence than a driver's tap.</bpmn2:documentation>
+      <bpmn2:dataOutputAssociation id="DataOut_Task_Takeover">
+        <bpmn2:targetRef>DataRef_Task_Takeover</bpmn2:targetRef>
+      </bpmn2:dataOutputAssociation>
+    </bpmn2:receiveTask>
+    <bpmn2:task id="Task_Delivery" name="Collect delivery signature">
+      <bpmn2:documentation>One activity, whoever signs. For a full container this is normally signed with reservation: sealed container received, seal intact, contents unchecked. Refusal is recorded as a reservation on the same activity. Unattended delivery is possible but unlikely for containers.</bpmn2:documentation>
+      <bpmn2:dataOutputAssociation id="DataOut_Task_Delivery">
+        <bpmn2:targetRef>DataRef_Task_Delivery</bpmn2:targetRef>
+      </bpmn2:dataOutputAssociation>
+    </bpmn2:task>
+    <bpmn2:task id="Task_Reservations" name="Register post-delivery&#10;reservations">
+      <bpmn2:documentation>Zero or more. The CMR Art. 30 window, during which damage or shortage found at devanning is registered against the note. For full containers this is the norm rather than the exception.</bpmn2:documentation>
+      <bpmn2:dataOutputAssociation id="DataOut_Task_Reservations">
+        <bpmn2:targetRef>DataRef_Task_Reservations</bpmn2:targetRef>
+      </bpmn2:dataOutputAssociation>
+      <bpmn2:standardLoopCharacteristics />
+    </bpmn2:task>
+    <bpmn2:task id="Task_Close" name="Seal evidence pack&#10;and distribute copies">
+      <bpmn2:dataOutputAssociation id="DataOut_Task_Close">
+        <bpmn2:targetRef>DataRef_Task_Close</bpmn2:targetRef>
+      </bpmn2:dataOutputAssociation>
+    </bpmn2:task>
+    <bpmn2:endEvent id="EndEvent_Closed" name="Consignment note closed" />
+    <bpmn2:dataObjectReference id="DataRef_Task_Draft" name="eCMR&#10;[draft]" dataObjectRef="DataObject_ECMR">
+      <bpmn2:dataState id="State_Task_Draft" name="draft" />
+    </bpmn2:dataObjectReference>
+    <bpmn2:dataObjectReference id="DataRef_Task_SignIssue" name="eCMR&#10;[issued]" dataObjectRef="DataObject_ECMR">
+      <bpmn2:dataState id="State_Task_SignIssue" name="issued" />
+    </bpmn2:dataObjectReference>
+    <bpmn2:dataObjectReference id="DataRef_Task_Nominate" name="eCMR&#10;[assigned]" dataObjectRef="DataObject_ECMR">
+      <bpmn2:dataState id="State_Task_Nominate" name="assigned" />
+    </bpmn2:dataObjectReference>
+    <bpmn2:dataObjectReference id="DataRef_Task_Publish" name="eCMR&#10;[published]" dataObjectRef="DataObject_ECMR">
+      <bpmn2:dataState id="State_Task_Publish" name="published" />
+    </bpmn2:dataObjectReference>
+    <bpmn2:dataObjectReference id="DataRef_Task_Takeover" name="eCMR&#10;[taken over]" dataObjectRef="DataObject_ECMR">
+      <bpmn2:dataState id="State_Task_Takeover" name="taken over" />
+    </bpmn2:dataObjectReference>
+    <bpmn2:dataObjectReference id="DataRef_Task_Delivery" name="eCMR&#10;[delivered]" dataObjectRef="DataObject_ECMR">
+      <bpmn2:dataState id="State_Task_Delivery" name="delivered" />
+    </bpmn2:dataObjectReference>
+    <bpmn2:dataObjectReference id="DataRef_Task_Reservations" name="eCMR&#10;[reservation registered]" dataObjectRef="DataObject_ECMR">
+      <bpmn2:dataState id="State_Task_Reservations" name="reservation registered" />
+    </bpmn2:dataObjectReference>
+    <bpmn2:dataObjectReference id="DataRef_Task_Close" name="eCMR&#10;[closed]" dataObjectRef="DataObject_ECMR">
+      <bpmn2:dataState id="State_Task_Close" name="closed" />
+    </bpmn2:dataObjectReference>
+    <bpmn2:dataObject id="DataObject_ECMR" name="eCMR" />
+    <bpmn2:sequenceFlow id="Flow_01" sourceRef="StartEvent_Carriage" targetRef="Task_Draft" />
+    <bpmn2:sequenceFlow id="Flow_02" sourceRef="Task_Draft" targetRef="Task_SignIssue" />
+    <bpmn2:sequenceFlow id="Flow_03" sourceRef="Task_SignIssue" targetRef="Task_Nominate" />
+    <bpmn2:sequenceFlow id="Flow_04" sourceRef="Task_Nominate" targetRef="Gateway_Efti" />
+    <bpmn2:sequenceFlow id="Flow_05" name="Yes" sourceRef="Gateway_Efti" targetRef="Task_Publish" />
+    <bpmn2:sequenceFlow id="Flow_06" sourceRef="Task_Publish" targetRef="Gateway_EftiJoin" />
+    <bpmn2:sequenceFlow id="Flow_NoEfti" name="No" sourceRef="Gateway_Efti" targetRef="Gateway_EftiJoin" />
+    <bpmn2:sequenceFlow id="Flow_08" sourceRef="Gateway_EftiJoin" targetRef="Task_Takeover" />
+    <bpmn2:sequenceFlow id="Flow_09" sourceRef="Task_Takeover" targetRef="Task_Delivery" />
+    <bpmn2:sequenceFlow id="Flow_14" sourceRef="Task_Delivery" targetRef="Task_Reservations" />
+    <bpmn2:sequenceFlow id="Flow_15" sourceRef="Task_Reservations" targetRef="Task_Close" />
+    <bpmn2:sequenceFlow id="Flow_16" sourceRef="Task_Close" targetRef="EndEvent_Closed" />
+    <bpmn2:textAnnotation id="Anno_Preparation">
+      <bpmn2:text>Preparation is the issuing party's alone, but every state it causes is recorded and owned by the provider - hence the state boxes sit in the provider's lane.</bpmn2:text>
+    </bpmn2:textAnnotation>
+    <bpmn2:textAnnotation id="Anno_Subcontract">
+      <bpmn2:text>Subcontracting is decided in the transport process. Here it only ever adds a signer - the issuing party never hands the note over.</bpmn2:text>
+    </bpmn2:textAnnotation>
+    <bpmn2:association id="Assoc_Anno_Subcontract" sourceRef="Task_Nominate" targetRef="Anno_Subcontract" />
+    <bpmn2:textAnnotation id="Anno_Execution">
+      <bpmn2:text>Execution is the provider's: it runs the signing ceremonies and records state. The issuing party receives every state change automatically through the update event. Amendment after issuance is a versioned re-issue, not an edit.</bpmn2:text>
+    </bpmn2:textAnnotation>
+  </bpmn2:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_ECMR">
+    <bpmndi:BPMNPlane id="BPMNPlane_ECMR" bpmnElement="Collaboration_ECMR">
+      <bpmndi:BPMNShape id="Shape_Participant_Efti" bpmnElement="Participant_Efti" isHorizontal="true">
+        <dc:Bounds x="1100" y="150" width="200" height="60" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Participant_Transport" bpmnElement="Participant_Transport" isHorizontal="true">
+        <dc:Bounds x="160" y="1000" width="2260" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Participant_ECMR" bpmnElement="Participant_ECMR" isHorizontal="true">
+        <dc:Bounds x="160" y="280" width="2260" height="520" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Lane_IssuingParty" bpmnElement="Lane_IssuingParty" isHorizontal="true">
+        <dc:Bounds x="190" y="280" width="2230" height="260" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Lane_Provider" bpmnElement="Lane_Provider" isHorizontal="true">
+        <dc:Bounds x="190" y="540" width="2230" height="260" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_StartEvent_Carriage" bpmnElement="StartEvent_Carriage">
+        <dc:Bounds x="282" y="422" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="248" y="465" width="104" height="40" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_Draft" bpmnElement="Task_Draft">
+        <dc:Bounds x="420" y="400" width="120" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_SignIssue" bpmnElement="Task_SignIssue">
+        <dc:Bounds x="600" y="400" width="120" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_Nominate" bpmnElement="Task_Nominate">
+        <dc:Bounds x="780" y="400" width="120" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Gateway_Efti" bpmnElement="Gateway_Efti" isMarkerVisible="true">
+        <dc:Bounds x="995" y="415" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="975" y="470" width="90" height="28" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_Publish" bpmnElement="Task_Publish">
+        <dc:Bounds x="1140" y="400" width="120" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Gateway_EftiJoin" bpmnElement="Gateway_EftiJoin" isMarkerVisible="true">
+        <dc:Bounds x="1355" y="415" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_Takeover" bpmnElement="Task_Takeover" bioc:stroke="#8c8c8c" bioc:fill="#f2f2f2" color:background-color="#f2f2f2" color:border-color="#8c8c8c">
+        <dc:Bounds x="1500" y="580" width="120" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_Delivery" bpmnElement="Task_Delivery">
+        <dc:Bounds x="1680" y="580" width="120" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_Reservations" bpmnElement="Task_Reservations">
+        <dc:Bounds x="1860" y="580" width="120" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_Close" bpmnElement="Task_Close">
+        <dc:Bounds x="2040" y="580" width="120" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_EndEvent_Closed" bpmnElement="EndEvent_Closed">
+        <dc:Bounds x="2262" y="602" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2228" y="645" width="104" height="40" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_DataRef_Task_Draft" bpmnElement="DataRef_Task_Draft">
+        <dc:Bounds x="428" y="705" width="36" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="468" y="713" width="70" height="34" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_DataRef_Task_SignIssue" bpmnElement="DataRef_Task_SignIssue">
+        <dc:Bounds x="608" y="705" width="36" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="648" y="713" width="70" height="34" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_DataRef_Task_Nominate" bpmnElement="DataRef_Task_Nominate">
+        <dc:Bounds x="788" y="705" width="36" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="828" y="713" width="70" height="34" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_DataRef_Task_Publish" bpmnElement="DataRef_Task_Publish">
+        <dc:Bounds x="1148" y="705" width="36" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1188" y="713" width="70" height="34" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_DataRef_Task_Takeover" bpmnElement="DataRef_Task_Takeover">
+        <dc:Bounds x="1508" y="705" width="36" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1548" y="713" width="70" height="34" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_DataRef_Task_Delivery" bpmnElement="DataRef_Task_Delivery">
+        <dc:Bounds x="1688" y="705" width="36" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1728" y="713" width="70" height="34" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_DataRef_Task_Reservations" bpmnElement="DataRef_Task_Reservations">
+        <dc:Bounds x="1868" y="705" width="36" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1908" y="713" width="70" height="34" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_DataRef_Task_Close" bpmnElement="DataRef_Task_Close">
+        <dc:Bounds x="2048" y="705" width="36" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2088" y="713" width="70" height="34" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Anno_Preparation" bpmnElement="Anno_Preparation">
+        <dc:Bounds x="400" y="294" width="330" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Anno_Subcontract" bpmnElement="Anno_Subcontract">
+        <dc:Bounds x="760" y="294" width="240" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Anno_Execution" bpmnElement="Anno_Execution">
+        <dc:Bounds x="1680" y="388" width="390" height="104" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Edge_Flow_01" bpmnElement="Flow_01">
+        <di:waypoint x="318" y="440" />
+        <di:waypoint x="420" y="440" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_02" bpmnElement="Flow_02">
+        <di:waypoint x="540" y="440" />
+        <di:waypoint x="600" y="440" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_03" bpmnElement="Flow_03">
+        <di:waypoint x="720" y="440" />
+        <di:waypoint x="780" y="440" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_04" bpmnElement="Flow_04">
+        <di:waypoint x="900" y="440" />
+        <di:waypoint x="995" y="440" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_05" bpmnElement="Flow_05">
+        <di:waypoint x="1045" y="440" />
+        <di:waypoint x="1140" y="440" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1059" y="420" width="22" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_06" bpmnElement="Flow_06">
+        <di:waypoint x="1260" y="440" />
+        <di:waypoint x="1355" y="440" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_NoEfti" bpmnElement="Flow_NoEfti">
+        <di:waypoint x="1020" y="415" />
+        <di:waypoint x="1020" y="350" />
+        <di:waypoint x="1380" y="350" />
+        <di:waypoint x="1380" y="415" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1026" y="352" width="22" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_08" bpmnElement="Flow_08">
+        <di:waypoint x="1405" y="440" />
+        <di:waypoint x="1452.5" y="440" />
+        <di:waypoint x="1452.5" y="620" />
+        <di:waypoint x="1500" y="620" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_09" bpmnElement="Flow_09">
+        <di:waypoint x="1620" y="620" />
+        <di:waypoint x="1680" y="620" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_14" bpmnElement="Flow_14">
+        <di:waypoint x="1800" y="620" />
+        <di:waypoint x="1860" y="620" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_15" bpmnElement="Flow_15">
+        <di:waypoint x="1980" y="620" />
+        <di:waypoint x="2040" y="620" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_16" bpmnElement="Flow_16">
+        <di:waypoint x="2160" y="620" />
+        <di:waypoint x="2262" y="620" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_DataOut_Task_Draft" bpmnElement="DataOut_Task_Draft">
+        <di:waypoint x="446" y="480" />
+        <di:waypoint x="446" y="705" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_DataOut_Task_SignIssue" bpmnElement="DataOut_Task_SignIssue">
+        <di:waypoint x="626" y="480" />
+        <di:waypoint x="626" y="705" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_DataOut_Task_Nominate" bpmnElement="DataOut_Task_Nominate">
+        <di:waypoint x="806" y="480" />
+        <di:waypoint x="806" y="705" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_DataOut_Task_Publish" bpmnElement="DataOut_Task_Publish">
+        <di:waypoint x="1166" y="480" />
+        <di:waypoint x="1166" y="705" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_DataOut_Task_Takeover" bpmnElement="DataOut_Task_Takeover">
+        <di:waypoint x="1526" y="660" />
+        <di:waypoint x="1526" y="705" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_DataOut_Task_Delivery" bpmnElement="DataOut_Task_Delivery">
+        <di:waypoint x="1706" y="660" />
+        <di:waypoint x="1706" y="705" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_DataOut_Task_Reservations" bpmnElement="DataOut_Task_Reservations">
+        <di:waypoint x="1886" y="660" />
+        <di:waypoint x="1886" y="705" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_DataOut_Task_Close" bpmnElement="DataOut_Task_Close">
+        <di:waypoint x="2066" y="660" />
+        <di:waypoint x="2066" y="705" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Assoc_Anno_Subcontract" bpmnElement="Assoc_Anno_Subcontract">
+        <di:waypoint x="840" y="400" />
+        <di:waypoint x="840" y="364" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Msg_Appointment" bpmnElement="Msg_Appointment">
+        <di:waypoint x="750" y="1000" />
+        <di:waypoint x="750" y="465" />
+        <di:waypoint x="780" y="465" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="688" y="812" width="124" height="26" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Msg_Delivered" bpmnElement="Msg_Delivered">
+        <di:waypoint x="1650" y="1000" />
+        <di:waypoint x="1650" y="645" />
+        <di:waypoint x="1680" y="645" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1588" y="812" width="124" height="26" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Msg_Dataset" bpmnElement="Msg_Dataset">
+        <di:waypoint x="1200" y="400" />
+        <di:waypoint x="1200" y="210" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1138" y="228" width="124" height="26" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="Shape_Participant_TerminalVisit" bpmnElement="Participant_TerminalVisit" isHorizontal="true">
+        <dc:Bounds x="230" y="40" width="1330" height="60" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Edge_Msg_AppointmentMade" bpmnElement="Msg_AppointmentMade">
+        <di:waypoint x="300" y="100" />
+        <di:waypoint x="300" y="422" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="310" y="112" width="170" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Msg_VisitCompleted" bpmnElement="Msg_VisitCompleted">
+        <di:waypoint x="1530" y="100" />
+        <di:waypoint x="1530" y="580" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1540" y="112" width="150" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn2:definitions>

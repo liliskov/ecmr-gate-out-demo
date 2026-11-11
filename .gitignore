@@ -1,0 +1,20 @@
+# Node.js dependencies
+node_modules/
+
+# Local credentials and configuration
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Logs
+*.log
+npm-debug.log*
+
+# Generated files
+dist/
+coverage/
+
+# macOS
+.DS_Store

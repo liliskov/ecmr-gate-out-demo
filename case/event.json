@@ -1,0 +1,9 @@
+{
+  "id": "gate-out-042",
+  "type": "TerminalVisitCompleted",
+  "audience": "urn:ecmr-demo:org:ecmr-provider",
+  "visitId": "TV-042",
+  "containerId": "DEMO-CONT-42",
+  "gateOutTime": "2026-11-10T12:05:00Z",
+  "receiptRef": "urn:ecmr-demo:eir:TV-042"
+}

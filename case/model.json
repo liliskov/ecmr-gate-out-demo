@@ -1,0 +1,17 @@
+{
+  "instanceId": "ECMR-001",
+  "target": "urn:ecmr-demo:note:ECMR-001",
+  "receiver": "urn:ecmr-demo:org:ecmr-provider",
+  "correlation": {
+    "visitId": "TV-042",
+    "containerId": "DEMO-CONT-42"
+  },
+  "transition": {
+    "from": "assigned",
+    "to": "taken_over"
+  },
+  "evidenceFields": ["gateOutTime", "receiptRef"],
+  "datatypes": {
+    "gateOutTime": "http://www.w3.org/2001/XMLSchema#dateTime"
+  }
+}

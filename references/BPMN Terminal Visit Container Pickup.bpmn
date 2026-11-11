@@ -1,0 +1,724 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn2:definitions xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:bpmn2="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:bioc="http://bpmn.io/schema/bpmn/biocolor/1.0" xmlns:color="http://www.omg.org/spec/BPMN/non-normative/color/1.0" id="terminal-visit-container-pickup" targetNamespace="http://bpmn.io/schema/bpmn" xsi:schemaLocation="http://www.omg.org/spec/BPMN/20100524/MODEL BPMN20.xsd">
+  <bpmn2:collaboration id="Collaboration_TerminalVisit">
+    <bpmn2:documentation>The terminal visit for an import full-container pickup, as one bilateral process between the terminal and the transport service provider. The provider drives the visit: it books the window, pre-announces where the terminal requires it, makes the appointment, arrives and accepts or reserves at interchange. The terminal holds the record, notifies the subscribed provider when the container is discharged and when it is released for pickup, and performs the physical move. Everything that belongs to another agreement is a black-box participant and not a lane: the move is planned and settled in the container import transport process, and the receipt is cited by the eCMR consignment note. The pickup rights are verified at the gate back-to-back with the secure container release process, under the hood: no state changes hands, so that process has no line here. The lines between pools are state observations rather than message events - see the legend. One state object, Terminal visit, carries the whole process: the interchange receipt is a document the visit produces, not a state of its own.</bpmn2:documentation>
+    <bpmn2:participant id="Participant_Transport" name="Container import transport" />
+    <bpmn2:participant id="Participant_Visit" name="Terminal visit (import full-container pickup)" processRef="Process_TerminalVisit" />
+    <bpmn2:participant id="Participant_ECMR" name="eCMR consignment note" />
+    <bpmn2:messageFlow id="Obs_DeliveryPlanned" name="Container import [delivery planned]" sourceRef="Participant_Transport" targetRef="Participant_Visit" />
+    <bpmn2:messageFlow id="Obs_AppointmentMadeEcmr" name="Terminal visit [appointment made]" sourceRef="Task_MakeAppointment" targetRef="Participant_ECMR" />
+    <bpmn2:messageFlow id="Obs_VisitCompletedEcmr" name="Terminal visit [completed]" sourceRef="Participant_Visit" targetRef="Participant_ECMR" />
+    <bpmn2:messageFlow id="Obs_VisitCompleted" name="Terminal visit [completed]" sourceRef="Participant_Visit" targetRef="Participant_Transport" />
+  </bpmn2:collaboration>
+  <bpmn2:process id="Process_TerminalVisit" isExecutable="false">
+    <bpmn2:laneSet id="LaneSet_TerminalVisit">
+      <bpmn2:lane id="Lane_TSP" name="Transport service provider">
+        <bpmn2:flowNodeRef>StartEvent_Required</bpmn2:flowNodeRef>
+        <bpmn2:flowNodeRef>Task_Subscribe</bpmn2:flowNodeRef>
+        <bpmn2:flowNodeRef>Task_RequestSlot</bpmn2:flowNodeRef>
+        <bpmn2:flowNodeRef>Gateway_PreAnnounce</bpmn2:flowNodeRef>
+        <bpmn2:flowNodeRef>Task_PreAnnounce</bpmn2:flowNodeRef>
+        <bpmn2:flowNodeRef>Gateway_PreAnnounceJoin</bpmn2:flowNodeRef>
+        <bpmn2:flowNodeRef>Task_MakeAppointment</bpmn2:flowNodeRef>
+        <bpmn2:flowNodeRef>Task_Present</bpmn2:flowNodeRef>
+        <bpmn2:flowNodeRef>Task_CheckCondition</bpmn2:flowNodeRef>
+        <bpmn2:flowNodeRef>Gateway_Verdict</bpmn2:flowNodeRef>
+      </bpmn2:lane>
+      <bpmn2:lane id="Lane_Terminal" name="Terminal">
+        <bpmn2:flowNodeRef>Task_NotifyDischarge</bpmn2:flowNodeRef>
+        <bpmn2:flowNodeRef>Task_NotifyRelease</bpmn2:flowNodeRef>
+        <bpmn2:flowNodeRef>Task_CheckAdmission</bpmn2:flowNodeRef>
+        <bpmn2:flowNodeRef>Gateway_Admit</bpmn2:flowNodeRef>
+        <bpmn2:flowNodeRef>Task_Admit</bpmn2:flowNodeRef>
+        <bpmn2:flowNodeRef>Task_RefuseAdmission</bpmn2:flowNodeRef>
+        <bpmn2:flowNodeRef>EndEvent_Refused</bpmn2:flowNodeRef>
+        <bpmn2:flowNodeRef>Task_Move</bpmn2:flowNodeRef>
+        <bpmn2:flowNodeRef>Task_RecordCondition</bpmn2:flowNodeRef>
+        <bpmn2:flowNodeRef>Task_IssueEir</bpmn2:flowNodeRef>
+        <bpmn2:flowNodeRef>Task_GateOut</bpmn2:flowNodeRef>
+        <bpmn2:flowNodeRef>EndEvent_Completed</bpmn2:flowNodeRef>
+        <bpmn2:flowNodeRef>Gateway_VerdictJoin</bpmn2:flowNodeRef>
+        <bpmn2:flowNodeRef>EndEvent_Aborted</bpmn2:flowNodeRef>
+        <bpmn2:flowNodeRef>Task_ReverseMove</bpmn2:flowNodeRef>
+        <bpmn2:flowNodeRef>Gateway_Taken</bpmn2:flowNodeRef>
+        <bpmn2:flowNodeRef>Task_Reservation</bpmn2:flowNodeRef>
+      </bpmn2:lane>
+    </bpmn2:laneSet>
+    <bpmn2:sequenceFlow id="Flow_TV_01" sourceRef="StartEvent_Required" targetRef="Task_Subscribe" />
+    <bpmn2:sequenceFlow id="Flow_TV_S1" sourceRef="Task_Subscribe" targetRef="Task_NotifyDischarge" />
+    <bpmn2:sequenceFlow id="Flow_TV_S2" sourceRef="Task_NotifyDischarge" targetRef="Task_NotifyRelease" />
+    <bpmn2:sequenceFlow id="Flow_TV_S3" sourceRef="Task_NotifyRelease" targetRef="Task_RequestSlot" />
+    <bpmn2:sequenceFlow id="Flow_TV_02" sourceRef="Task_RequestSlot" targetRef="Gateway_PreAnnounce" />
+    <bpmn2:sequenceFlow id="Flow_TV_03" name="Yes" sourceRef="Gateway_PreAnnounce" targetRef="Task_PreAnnounce" />
+    <bpmn2:sequenceFlow id="Flow_NoPreAnnounce" name="No" sourceRef="Gateway_PreAnnounce" targetRef="Gateway_PreAnnounceJoin" />
+    <bpmn2:sequenceFlow id="Flow_TV_04" sourceRef="Task_PreAnnounce" targetRef="Gateway_PreAnnounceJoin" />
+    <bpmn2:sequenceFlow id="Flow_TV_05" sourceRef="Gateway_PreAnnounceJoin" targetRef="Task_MakeAppointment" />
+    <bpmn2:sequenceFlow id="Flow_TV_06" sourceRef="Task_MakeAppointment" targetRef="Task_Present" />
+    <bpmn2:sequenceFlow id="Flow_TV_07" sourceRef="Task_Present" targetRef="Task_CheckAdmission" />
+    <bpmn2:sequenceFlow id="Flow_TV_08" sourceRef="Task_CheckAdmission" targetRef="Gateway_Admit" />
+    <bpmn2:sequenceFlow id="Flow_TV_09" name="Yes" sourceRef="Gateway_Admit" targetRef="Task_Admit" />
+    <bpmn2:sequenceFlow id="Flow_NoAdmission" name="No" sourceRef="Gateway_Admit" targetRef="Task_RefuseAdmission" />
+    <bpmn2:sequenceFlow id="Flow_TV_10" sourceRef="Task_RefuseAdmission" targetRef="EndEvent_Refused" />
+    <bpmn2:sequenceFlow id="Flow_TV_11" sourceRef="Task_Admit" targetRef="Task_Move" />
+    <bpmn2:sequenceFlow id="Flow_TV_12" sourceRef="Task_Move" targetRef="Task_RecordCondition" />
+    <bpmn2:sequenceFlow id="Flow_TV_13" sourceRef="Task_RecordCondition" targetRef="Task_CheckCondition" />
+    <bpmn2:sequenceFlow id="Flow_TV_14" sourceRef="Task_CheckCondition" targetRef="Gateway_Verdict" />
+    <bpmn2:sequenceFlow id="Flow_TV_15" name="Yes" sourceRef="Gateway_Verdict" targetRef="Gateway_VerdictJoin" />
+    <bpmn2:sequenceFlow id="Flow_TV_20" sourceRef="Task_IssueEir" targetRef="Task_GateOut" />
+    <bpmn2:sequenceFlow id="Flow_TV_21" sourceRef="Task_GateOut" targetRef="EndEvent_Completed" />
+    <bpmn2:startEvent id="StartEvent_Required" name="Container to collect">
+      <bpmn2:documentation>Hook to the container import transport process: the transport service provider has planned the delivery and knows which container to collect, and where. One instance per visit.</bpmn2:documentation>
+    </bpmn2:startEvent>
+    <bpmn2:task id="Task_Subscribe" name="Subscribe to&#10;container updates">
+      <bpmn2:documentation>The provider subscribes to the container's status at the terminal, so that discharge and release reach it as notifications instead of being polled for. The subscription is what makes the terminal's notifications part of this process.</bpmn2:documentation>
+      <bpmn2:dataOutputAssociation id="DataOut_Task_Subscribe_Visit">
+        <bpmn2:targetRef>DataRef_Task_Subscribe_Visit</bpmn2:targetRef>
+      </bpmn2:dataOutputAssociation>
+    </bpmn2:task>
+    <bpmn2:dataObjectReference id="DataRef_Task_Subscribe_Visit" name="Terminal visit&#10;[subscribed]" dataObjectRef="DataObject_Visit">
+      <bpmn2:dataState id="State_Task_Subscribe_Visit" name="subscribed" />
+    </bpmn2:dataObjectReference>
+    <bpmn2:task id="Task_NotifyDischarge" name="Notify container&#10;discharged">
+      <bpmn2:documentation>The terminal reports that the container is off the vessel and in the stack. It cannot be collected yet: customs and commercial holds may still apply.</bpmn2:documentation>
+      <bpmn2:dataOutputAssociation id="DataOut_Task_NotifyDischarge_Visit">
+        <bpmn2:targetRef>DataRef_Task_NotifyDischarge_Visit</bpmn2:targetRef>
+      </bpmn2:dataOutputAssociation>
+    </bpmn2:task>
+    <bpmn2:dataObjectReference id="DataRef_Task_NotifyDischarge_Visit" name="Terminal visit&#10;[discharged]" dataObjectRef="DataObject_Visit">
+      <bpmn2:dataState id="State_Task_NotifyDischarge_Visit" name="discharged" />
+    </bpmn2:dataObjectReference>
+    <bpmn2:task id="Task_NotifyRelease" name="Notify container&#10;released for pickup">
+      <bpmn2:documentation>The terminal reports that every hold is lifted - customs released and the commercial release received - so the container can be collected. This notification, not the receipt of the pickup rights, is what triggers the appointment.</bpmn2:documentation>
+      <bpmn2:dataOutputAssociation id="DataOut_Task_NotifyRelease_Visit">
+        <bpmn2:targetRef>DataRef_Task_NotifyRelease_Visit</bpmn2:targetRef>
+      </bpmn2:dataOutputAssociation>
+    </bpmn2:task>
+    <bpmn2:dataObjectReference id="DataRef_Task_NotifyRelease_Visit" name="Terminal visit&#10;[released for pickup]" dataObjectRef="DataObject_Visit">
+      <bpmn2:dataState id="State_Task_NotifyRelease_Visit" name="released for pickup" />
+    </bpmn2:dataObjectReference>
+    <bpmn2:task id="Task_RequestSlot" name="Request time slot">
+      <bpmn2:documentation>Precondition: advances no state. A window is only held once Make appointment records it. Repeats until a window is held. A missed window is rebooked, not carried over.</bpmn2:documentation>
+      <bpmn2:standardLoopCharacteristics />
+    </bpmn2:task>
+    <bpmn2:exclusiveGateway id="Gateway_PreAnnounce" name="Pre-announcement&#10;required?" default="Flow_NoPreAnnounce">
+      <bpmn2:documentation>Terminal policy, not the provider's choice. Some terminals require the container to be declared before arrival; others validate everything at the gate.</bpmn2:documentation>
+    </bpmn2:exclusiveGateway>
+    <bpmn2:task id="Task_PreAnnounce" name="Pre-announce container">
+      <bpmn2:documentation>Container number, and driver and truck where the terminal requires them. The release right is not declared here - it is verified at the gate, under the hood, and the driver carries no transferable code.</bpmn2:documentation>
+      <bpmn2:dataOutputAssociation id="DataOut_Task_PreAnnounce_Visit">
+        <bpmn2:targetRef>DataRef_Task_PreAnnounce_Visit</bpmn2:targetRef>
+      </bpmn2:dataOutputAssociation>
+    </bpmn2:task>
+    <bpmn2:exclusiveGateway id="Gateway_PreAnnounceJoin" />
+    <bpmn2:task id="Task_MakeAppointment" name="Make appointment">
+      <bpmn2:documentation>The provider books the visit against a window the terminal holds. Nothing about the container or the driver is validated yet.</bpmn2:documentation>
+      <bpmn2:dataOutputAssociation id="DataOut_Task_MakeAppointment_Visit">
+        <bpmn2:targetRef>DataRef_Task_MakeAppointment_Visit</bpmn2:targetRef>
+      </bpmn2:dataOutputAssociation>
+    </bpmn2:task>
+    <bpmn2:task id="Task_Present" name="Driver presents&#10;at the gate">
+      <bpmn2:documentation>Precondition: advances no state. The arrival is registered by the admission or refusal that follows. Identity credential and container number. The arrival timestamp starts the turnaround clock.</bpmn2:documentation>
+    </bpmn2:task>
+    <bpmn2:task id="Task_CheckAdmission" name="Check appointment,&#10;holds and release right">
+      <bpmn2:documentation>Precondition: advances no state. The outcome is registered by Admit truck and record gate-in, or by Refuse admission and report reason. Three separate questions: is there a valid appointment, is the container free of terminal and customs holds, and is this driver entitled to it. The third is answered back-to-back by the secure release provider, under the hood: no state changes hands.</bpmn2:documentation>
+    </bpmn2:task>
+    <bpmn2:exclusiveGateway id="Gateway_Admit" name="Admission valid?" default="Flow_NoAdmission" />
+    <bpmn2:task id="Task_Admit" name="Admit truck and&#10;record gate-in">
+      <bpmn2:documentation>Gate-in timestamp. The truck is inside the terminal and the visit is live.</bpmn2:documentation>
+      <bpmn2:dataOutputAssociation id="DataOut_Task_Admit_Visit">
+        <bpmn2:targetRef>DataRef_Task_Admit_Visit</bpmn2:targetRef>
+      </bpmn2:dataOutputAssociation>
+    </bpmn2:task>
+    <bpmn2:task id="Task_RefuseAdmission" name="Refuse admission&#10;and report reason">
+      <bpmn2:documentation>No appointment, an active hold, the wrong driver or an unvalidated right. The provider re-enters this process with a new appointment; nothing is carried over.</bpmn2:documentation>
+      <bpmn2:dataOutputAssociation id="DataOut_Task_RefuseAdmission_Visit">
+        <bpmn2:targetRef>DataRef_Task_RefuseAdmission_Visit</bpmn2:targetRef>
+      </bpmn2:dataOutputAssociation>
+    </bpmn2:task>
+    <bpmn2:endEvent id="EndEvent_Refused" name="Admission refused" />
+    <bpmn2:task id="Task_Move" name="Perform container&#10;move">
+      <bpmn2:documentation>Locate, lift and place the container. Generic on purpose: the same step covers a drop-off on an empty return or a shunt, without changing the process.</bpmn2:documentation>
+      <bpmn2:dataOutputAssociation id="DataOut_Task_Move_Visit">
+        <bpmn2:targetRef>DataRef_Task_Move_Visit</bpmn2:targetRef>
+      </bpmn2:dataOutputAssociation>
+    </bpmn2:task>
+    <bpmn2:task id="Task_RecordCondition" name="Record container&#10;condition and seal">
+      <bpmn2:documentation>Container number, seal number, visible damage, placards, tare. Condition means the box and not the contents - nobody opens a sealed container at interchange.</bpmn2:documentation>
+      <bpmn2:dataOutputAssociation id="DataOut_Task_RecordCondition_Visit">
+        <bpmn2:targetRef>DataRef_Task_RecordCondition_Visit</bpmn2:targetRef>
+      </bpmn2:dataOutputAssociation>
+    </bpmn2:task>
+    <bpmn2:task id="Task_CheckCondition" name="Check container and&#10;seal at interchange">
+      <bpmn2:documentation>Precondition: advances no state. The outcome is registered by Register reservation on receipt, or by the receipt being issued without one. The driver checks against what the terminal recorded. This is the moment the CMR convention barely addresses, and the receipt is the only artefact covering it.</bpmn2:documentation>
+    </bpmn2:task>
+    <bpmn2:exclusiveGateway id="Gateway_Verdict" name="Condition accepted?" default="Flow_NoCondition">
+      <bpmn2:outgoing>Flow_NoCondition</bpmn2:outgoing>
+    </bpmn2:exclusiveGateway>
+    <bpmn2:task id="Task_IssueEir" name="Issue interchange&#10;receipt">
+      <bpmn2:documentation>The terminal issues and owns the receipt. It is not a CMR instrument and it is not legally waterproof, but it is issued by a party with no interest in the contract of carriage, and that is what gives it evidential weight.</bpmn2:documentation>
+      <bpmn2:incoming>Flow_TV_19</bpmn2:incoming>
+      <bpmn2:dataOutputAssociation id="DataOut_Task_IssueEir_Visit">
+        <bpmn2:targetRef>DataRef_Task_IssueEir_Visit</bpmn2:targetRef>
+      </bpmn2:dataOutputAssociation>
+    </bpmn2:task>
+    <bpmn2:task id="Task_GateOut" name="Record gate-out&#10;and release truck">
+      <bpmn2:documentation>The gate-out timestamp closes both the receipt and the visit. With arrival and gate-in this is the turnaround record, and the evidence base for waiting-time claims.</bpmn2:documentation>
+      <bpmn2:dataOutputAssociation id="DataOut_Task_GateOut_Visit">
+        <bpmn2:targetRef>DataRef_Task_GateOut_Visit</bpmn2:targetRef>
+      </bpmn2:dataOutputAssociation>
+    </bpmn2:task>
+    <bpmn2:endEvent id="EndEvent_Completed" name="Visit completed" />
+    <bpmn2:dataObjectReference id="DataRef_Task_PreAnnounce_Visit" name="Terminal visit&#10;[pre-announced]" dataObjectRef="DataObject_Visit">
+      <bpmn2:dataState id="State_Task_PreAnnounce_Visit" name="pre-announced" />
+    </bpmn2:dataObjectReference>
+    <bpmn2:dataObjectReference id="DataRef_Task_MakeAppointment_Visit" name="Terminal visit&#10;[appointment made]" dataObjectRef="DataObject_Visit">
+      <bpmn2:dataState id="State_Task_MakeAppointment_Visit" name="appointment made" />
+    </bpmn2:dataObjectReference>
+    <bpmn2:dataObjectReference id="DataRef_Task_Admit_Visit" name="Terminal visit&#10;[admitted]" dataObjectRef="DataObject_Visit">
+      <bpmn2:dataState id="State_Task_Admit_Visit" name="admitted" />
+    </bpmn2:dataObjectReference>
+    <bpmn2:dataObjectReference id="DataRef_Task_RefuseAdmission_Visit" name="Terminal visit&#10;[admission refused]" dataObjectRef="DataObject_Visit">
+      <bpmn2:dataState id="State_Task_RefuseAdmission_Visit" name="admission refused" />
+    </bpmn2:dataObjectReference>
+    <bpmn2:dataObjectReference id="DataRef_Task_Move_Visit" name="Terminal visit&#10;[move performed]" dataObjectRef="DataObject_Visit">
+      <bpmn2:dataState id="State_Task_Move_Visit" name="move performed" />
+    </bpmn2:dataObjectReference>
+    <bpmn2:dataObjectReference id="DataRef_Task_RecordCondition_Visit" name="Terminal visit&#10;[condition captured]" dataObjectRef="DataObject_Visit">
+      <bpmn2:dataState id="State_Task_RecordCondition_Visit" name="condition captured" />
+    </bpmn2:dataObjectReference>
+    <bpmn2:dataObjectReference id="DataRef_Task_IssueEir_Visit" name="Terminal visit&#10;[receipt issued]" dataObjectRef="DataObject_Visit">
+      <bpmn2:dataState id="State_Task_IssueEir_Visit" name="receipt issued" />
+    </bpmn2:dataObjectReference>
+    <bpmn2:dataObjectReference id="DataRef_Task_GateOut_Visit" name="Terminal visit&#10;[completed]" dataObjectRef="DataObject_Visit">
+      <bpmn2:dataState id="State_Task_GateOut_Visit" name="completed" />
+    </bpmn2:dataObjectReference>
+    <bpmn2:exclusiveGateway id="Gateway_VerdictJoin">
+      <bpmn2:incoming>Flow_TV_15</bpmn2:incoming>
+      <bpmn2:incoming>Flow_TV_17</bpmn2:incoming>
+      <bpmn2:outgoing>Flow_TV_19</bpmn2:outgoing>
+    </bpmn2:exclusiveGateway>
+    <bpmn2:sequenceFlow id="Flow_TV_19" sourceRef="Gateway_VerdictJoin" targetRef="Task_IssueEir" />
+    <bpmn2:endEvent id="EndEvent_Aborted" name="Move not completed">
+      <bpmn2:incoming>Flow_TV_18</bpmn2:incoming>
+    </bpmn2:endEvent>
+    <bpmn2:dataObjectReference id="DataRef_Task_ReverseMove_Visit" name="Terminal visit&#10;[aborted]" dataObjectRef="DataObject_Visit">
+      <bpmn2:dataState id="State_Task_ReverseMove_Visit" name="aborted" />
+    </bpmn2:dataObjectReference>
+    <bpmn2:dataObject id="DataObject_Visit" name="Terminal visit" />
+    <bpmn2:task id="Task_ReverseMove" name="Reverse the&#10;container move">
+      <bpmn2:documentation>Rare. The move is undone and the container goes back where it came from. The release right is not consumed, so the provider can re-enter with a new visit.</bpmn2:documentation>
+      <bpmn2:incoming>Flow_NotAccepted</bpmn2:incoming>
+      <bpmn2:outgoing>Flow_TV_18</bpmn2:outgoing>
+      <bpmn2:dataOutputAssociation id="DataOut_Task_ReverseMove_Visit">
+        <bpmn2:targetRef>DataRef_Task_ReverseMove_Visit</bpmn2:targetRef>
+      </bpmn2:dataOutputAssociation>
+    </bpmn2:task>
+    <bpmn2:sequenceFlow id="Flow_TV_18" sourceRef="Task_ReverseMove" targetRef="EndEvent_Aborted" />
+    <bpmn2:exclusiveGateway id="Gateway_Taken" name="Move accepted?" default="Flow_NotAccepted">
+      <bpmn2:documentation>The driver decides and the terminal registers the outcome. Declining outright is rare - the reservation is the normal instrument.</bpmn2:documentation>
+      <bpmn2:incoming>Flow_TV_16</bpmn2:incoming>
+      <bpmn2:outgoing>Flow_NotAccepted</bpmn2:outgoing>
+      <bpmn2:outgoing>Flow_TV_17</bpmn2:outgoing>
+    </bpmn2:exclusiveGateway>
+    <bpmn2:sequenceFlow id="Flow_NotAccepted" name="No" sourceRef="Gateway_Taken" targetRef="Task_ReverseMove" />
+    <bpmn2:sequenceFlow id="Flow_TV_17" name="Yes" sourceRef="Gateway_Taken" targetRef="Gateway_VerdictJoin" />
+    <bpmn2:dataObjectReference id="DataRef_Task_Reservation_Visit" name="Terminal visit&#10;[reservation registered]" dataObjectRef="DataObject_Visit">
+      <bpmn2:dataState id="State_Task_Reservation_Visit" name="reservation registered" />
+    </bpmn2:dataObjectReference>
+    <bpmn2:task id="Task_Reservation" name="Register reservation&#10;on receipt">
+      <bpmn2:documentation>Seal mismatch, visible damage, missing placards. Reservation is the normal instrument here, exactly as it is at eCMR takeover - the exception is refusing the move, not reserving on it.</bpmn2:documentation>
+      <bpmn2:incoming>Flow_NoCondition</bpmn2:incoming>
+      <bpmn2:outgoing>Flow_TV_16</bpmn2:outgoing>
+      <bpmn2:dataOutputAssociation id="DataOut_Task_Reservation_Visit">
+        <bpmn2:targetRef>DataRef_Task_Reservation_Visit</bpmn2:targetRef>
+      </bpmn2:dataOutputAssociation>
+    </bpmn2:task>
+    <bpmn2:sequenceFlow id="Flow_TV_16" sourceRef="Task_Reservation" targetRef="Gateway_Taken" />
+    <bpmn2:sequenceFlow id="Flow_NoCondition" name="No" sourceRef="Gateway_Verdict" targetRef="Task_Reservation" />
+    <bpmn2:textAnnotation id="Anno_Legend">
+      <bpmn2:text>Legend. The dashed lines between pools are state observations, not message events. A state becoming visible does not advance another process: the counterparty's back office reads it, decides what to do with it outside process space, and its own process then advances on its own authority. Neither side waits for the other. Grey activities are preconditions: informational only, they advance no state, and the step that follows registers their outcome.</bpmn2:text>
+    </bpmn2:textAnnotation>
+    <bpmn2:textAnnotation id="Anno_EmptyReturn">
+      <bpmn2:text>The empty return is another instance of this process, not a branch of it.</bpmn2:text>
+    </bpmn2:textAnnotation>
+    <bpmn2:textAnnotation id="Anno_Driven">
+      <bpmn2:text>From the release notification up to arrival, everything is driven by the provider. The terminal holds the window and records the booking, but takes no step of its own.</bpmn2:text>
+    </bpmn2:textAnnotation>
+    <bpmn2:textAnnotation id="Anno_Precondition">
+      <bpmn2:text>Precondition, not an observation. The terminal verifies the pickup rights back-to-back with the secure release provider, under the hood: no state changes hands in either process, so no line is drawn. Nothing here is discretionary and no back office sits in between.</bpmn2:text>
+    </bpmn2:textAnnotation>
+    <bpmn2:textAnnotation id="Anno_Receipt">
+      <bpmn2:text>The terminal owns the receipt. The eCMR process cites it by observing Terminal visit [completed], once gate-out has closed it, and the carrier never forwards a copy of it. That is what makes the handover evidence independently verifiable.</bpmn2:text>
+    </bpmn2:textAnnotation>
+    <bpmn2:association id="Assoc_Anno_EmptyReturn" sourceRef="StartEvent_Required" targetRef="Anno_EmptyReturn" />
+    <bpmn2:association id="Assoc_Anno_Driven" sourceRef="Task_MakeAppointment" targetRef="Anno_Driven" />
+    <bpmn2:association id="Assoc_Anno_Precondition" sourceRef="Task_CheckAdmission" targetRef="Anno_Precondition" />
+    <bpmn2:association id="Assoc_Anno_Receipt" sourceRef="Task_IssueEir" targetRef="Anno_Receipt" />
+  </bpmn2:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_TerminalVisit">
+    <bpmndi:BPMNPlane id="BPMNPlane_TerminalVisit" bpmnElement="Collaboration_TerminalVisit">
+      <bpmndi:BPMNShape id="Shape_Participant_Transport" bpmnElement="Participant_Transport" isHorizontal="true">
+        <dc:Bounds x="160" y="80" width="4360" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Participant_Visit" bpmnElement="Participant_Visit" isHorizontal="true">
+        <dc:Bounds x="160" y="220" width="4360" height="680" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Lane_Terminal" bpmnElement="Lane_Terminal" isHorizontal="true">
+        <dc:Bounds x="190" y="460" width="4330" height="440" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Lane_TSP" bpmnElement="Lane_TSP" isHorizontal="true">
+        <dc:Bounds x="190" y="220" width="4330" height="240" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_StartEvent_Required" bpmnElement="StartEvent_Required">
+        <dc:Bounds x="282" y="322" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="245" y="365" width="110" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_RequestSlot" bpmnElement="Task_RequestSlot" bioc:stroke="#8c8c8c" bioc:fill="#f2f2f2" color:background-color="#f2f2f2" color:border-color="#8c8c8c">
+        <dc:Bounds x="960" y="300" width="120" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Gateway_PreAnnounce" bpmnElement="Gateway_PreAnnounce" isMarkerVisible="true">
+        <dc:Bounds x="1175" y="315" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1140" y="281" width="120" height="28" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_PreAnnounce" bpmnElement="Task_PreAnnounce">
+        <dc:Bounds x="1320" y="300" width="120" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Gateway_PreAnnounceJoin" bpmnElement="Gateway_PreAnnounceJoin" isMarkerVisible="true">
+        <dc:Bounds x="1535" y="315" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_MakeAppointment" bpmnElement="Task_MakeAppointment">
+        <dc:Bounds x="1680" y="300" width="120" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_Present" bpmnElement="Task_Present" bioc:stroke="#8c8c8c" bioc:fill="#f2f2f2" color:background-color="#f2f2f2" color:border-color="#8c8c8c">
+        <dc:Bounds x="1860" y="300" width="120" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_CheckAdmission" bpmnElement="Task_CheckAdmission" bioc:stroke="#8c8c8c" bioc:fill="#f2f2f2" color:background-color="#f2f2f2" color:border-color="#8c8c8c">
+        <dc:Bounds x="2040" y="500" width="120" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Gateway_Admit" bpmnElement="Gateway_Admit" isMarkerVisible="true">
+        <dc:Bounds x="2255" y="515" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2220" y="481" width="120" height="28" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_Admit" bpmnElement="Task_Admit">
+        <dc:Bounds x="2400" y="500" width="120" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_RefuseAdmission" bpmnElement="Task_RefuseAdmission">
+        <dc:Bounds x="2400" y="700" width="120" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_EndEvent_Refused" bpmnElement="EndEvent_Refused">
+        <dc:Bounds x="2598" y="722" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2561" y="765" width="110" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_Move" bpmnElement="Task_Move">
+        <dc:Bounds x="2580" y="500" width="120" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_RecordCondition" bpmnElement="Task_RecordCondition">
+        <dc:Bounds x="2760" y="500" width="120" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_CheckCondition" bpmnElement="Task_CheckCondition" bioc:stroke="#8c8c8c" bioc:fill="#f2f2f2" color:background-color="#f2f2f2" color:border-color="#8c8c8c">
+        <dc:Bounds x="2940" y="300" width="120" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Gateway_Verdict" bpmnElement="Gateway_Verdict" isMarkerVisible="true">
+        <dc:Bounds x="3155" y="315" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="3130" y="281" width="101" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_Reservation" bpmnElement="Task_Reservation">
+        <dc:Bounds x="3300" y="500" width="120" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Gateway_Taken" bpmnElement="Gateway_Taken" isMarkerVisible="true">
+        <dc:Bounds x="3515" y="515" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="3500" y="481" width="81" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_ReverseMove" bpmnElement="Task_ReverseMove">
+        <dc:Bounds x="3600" y="700" width="120" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_EndEvent_Aborted" bpmnElement="EndEvent_Aborted">
+        <dc:Bounds x="3780" y="722" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="3748" y="765" width="100" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Gateway_VerdictJoin" bpmnElement="Gateway_VerdictJoin" isMarkerVisible="true">
+        <dc:Bounds x="3695" y="515" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_IssueEir" bpmnElement="Task_IssueEir">
+        <dc:Bounds x="3840" y="500" width="120" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_GateOut" bpmnElement="Task_GateOut">
+        <dc:Bounds x="4020" y="500" width="120" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_EndEvent_Completed" bpmnElement="EndEvent_Completed">
+        <dc:Bounds x="4218" y="522" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="4181" y="565" width="110" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_DataRef_Task_PreAnnounce_Visit" bpmnElement="DataRef_Task_PreAnnounce_Visit">
+        <dc:Bounds x="1338" y="600" width="36" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1382" y="604" width="120" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_DataRef_Task_MakeAppointment_Visit" bpmnElement="DataRef_Task_MakeAppointment_Visit">
+        <dc:Bounds x="1698" y="600" width="36" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1742" y="604" width="120" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_DataRef_Task_Admit_Visit" bpmnElement="DataRef_Task_Admit_Visit">
+        <dc:Bounds x="2418" y="600" width="36" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2462" y="604" width="120" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_DataRef_Task_RefuseAdmission_Visit" bpmnElement="DataRef_Task_RefuseAdmission_Visit">
+        <dc:Bounds x="2418" y="820" width="36" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2462" y="824" width="120" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_DataRef_Task_Move_Visit" bpmnElement="DataRef_Task_Move_Visit">
+        <dc:Bounds x="2598" y="600" width="36" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2642" y="604" width="120" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_DataRef_Task_RecordCondition_Visit" bpmnElement="DataRef_Task_RecordCondition_Visit">
+        <dc:Bounds x="2778" y="600" width="36" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2822" y="604" width="120" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_DataRef_Task_Reservation_Visit" bpmnElement="DataRef_Task_Reservation_Visit">
+        <dc:Bounds x="3318" y="600" width="36" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="3362" y="604" width="120" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_DataRef_Task_ReverseMove_Visit" bpmnElement="DataRef_Task_ReverseMove_Visit">
+        <dc:Bounds x="3618" y="820" width="36" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="3705" y="824" width="64" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_DataRef_Task_IssueEir_Visit" bpmnElement="DataRef_Task_IssueEir_Visit">
+        <dc:Bounds x="3858" y="600" width="36" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="3902" y="604" width="120" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_DataRef_Task_GateOut_Visit" bpmnElement="DataRef_Task_GateOut_Visit">
+        <dc:Bounds x="4038" y="600" width="36" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="4082" y="604" width="120" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Anno_Legend" bpmnElement="Anno_Legend">
+        <dc:Bounds x="250" y="690" width="640" height="150" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Anno_EmptyReturn" bpmnElement="Anno_EmptyReturn">
+        <dc:Bounds x="250" y="236" width="340" height="56" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Anno_Driven" bpmnElement="Anno_Driven">
+        <dc:Bounds x="1640" y="226" width="380" height="62" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Anno_Precondition" bpmnElement="Anno_Precondition">
+        <dc:Bounds x="1870" y="660" width="370" height="120" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Anno_Receipt" bpmnElement="Anno_Receipt">
+        <dc:Bounds x="3840" y="380" width="380" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Edge_Flow_TV_01" bpmnElement="Flow_TV_01">
+        <di:waypoint x="318" y="340" />
+        <di:waypoint x="420" y="340" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_TV_02" bpmnElement="Flow_TV_02">
+        <di:waypoint x="1080" y="340" />
+        <di:waypoint x="1175" y="340" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_TV_03" bpmnElement="Flow_TV_03">
+        <di:waypoint x="1225" y="340" />
+        <di:waypoint x="1320" y="340" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1233" y="320" width="24" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_NoPreAnnounce" bpmnElement="Flow_NoPreAnnounce">
+        <di:waypoint x="1225" y="340" />
+        <di:waypoint x="1250" y="340" />
+        <di:waypoint x="1250" y="250" />
+        <di:waypoint x="1560" y="250" />
+        <di:waypoint x="1560" y="315" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1233" y="320" width="24" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_TV_04" bpmnElement="Flow_TV_04">
+        <di:waypoint x="1440" y="340" />
+        <di:waypoint x="1535" y="340" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_TV_05" bpmnElement="Flow_TV_05">
+        <di:waypoint x="1585" y="340" />
+        <di:waypoint x="1680" y="340" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_TV_06" bpmnElement="Flow_TV_06">
+        <di:waypoint x="1800" y="340" />
+        <di:waypoint x="1860" y="340" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_TV_07" bpmnElement="Flow_TV_07">
+        <di:waypoint x="1980" y="340" />
+        <di:waypoint x="2010" y="340" />
+        <di:waypoint x="2010" y="540" />
+        <di:waypoint x="2040" y="540" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_TV_08" bpmnElement="Flow_TV_08">
+        <di:waypoint x="2160" y="540" />
+        <di:waypoint x="2255" y="540" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_TV_09" bpmnElement="Flow_TV_09">
+        <di:waypoint x="2305" y="540" />
+        <di:waypoint x="2400" y="540" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2313" y="520" width="24" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_NoAdmission" bpmnElement="Flow_NoAdmission">
+        <di:waypoint x="2280" y="565" />
+        <di:waypoint x="2280" y="740" />
+        <di:waypoint x="2400" y="740" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2288" y="545" width="24" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_TV_10" bpmnElement="Flow_TV_10">
+        <di:waypoint x="2520" y="740" />
+        <di:waypoint x="2598" y="740" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_TV_11" bpmnElement="Flow_TV_11">
+        <di:waypoint x="2520" y="540" />
+        <di:waypoint x="2580" y="540" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_TV_12" bpmnElement="Flow_TV_12">
+        <di:waypoint x="2700" y="540" />
+        <di:waypoint x="2760" y="540" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_TV_13" bpmnElement="Flow_TV_13">
+        <di:waypoint x="2880" y="540" />
+        <di:waypoint x="2910" y="540" />
+        <di:waypoint x="2910" y="340" />
+        <di:waypoint x="2940" y="340" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_TV_14" bpmnElement="Flow_TV_14">
+        <di:waypoint x="3060" y="340" />
+        <di:waypoint x="3155" y="340" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_TV_15" bpmnElement="Flow_TV_15">
+        <di:waypoint x="3205" y="340" />
+        <di:waypoint x="3720" y="340" />
+        <di:waypoint x="3720" y="515" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="3216" y="320" width="18" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_NoCondition" bpmnElement="Flow_NoCondition">
+        <di:waypoint x="3180" y="365" />
+        <di:waypoint x="3180" y="540" />
+        <di:waypoint x="3300" y="540" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="3193" y="345" width="15" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_TV_16" bpmnElement="Flow_TV_16">
+        <di:waypoint x="3420" y="540" />
+        <di:waypoint x="3515" y="540" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_TV_17" bpmnElement="Flow_TV_17">
+        <di:waypoint x="3565" y="540" />
+        <di:waypoint x="3695" y="540" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="3576" y="520" width="18" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_NotAccepted" bpmnElement="Flow_NotAccepted">
+        <di:waypoint x="3540" y="565" />
+        <di:waypoint x="3540" y="740" />
+        <di:waypoint x="3600" y="740" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="3553" y="545" width="15" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_TV_18" bpmnElement="Flow_TV_18">
+        <di:waypoint x="3720" y="740" />
+        <di:waypoint x="3780" y="740" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_TV_19" bpmnElement="Flow_TV_19">
+        <di:waypoint x="3745" y="540" />
+        <di:waypoint x="3840" y="540" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_TV_20" bpmnElement="Flow_TV_20">
+        <di:waypoint x="3960" y="540" />
+        <di:waypoint x="4020" y="540" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_TV_21" bpmnElement="Flow_TV_21">
+        <di:waypoint x="4140" y="540" />
+        <di:waypoint x="4218" y="540" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Assoc_Anno_EmptyReturn" bpmnElement="Assoc_Anno_EmptyReturn">
+        <di:waypoint x="300" y="322" />
+        <di:waypoint x="300" y="292" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Assoc_Anno_Driven" bpmnElement="Assoc_Anno_Driven">
+        <di:waypoint x="1740" y="300" />
+        <di:waypoint x="1740" y="288" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Assoc_Anno_Precondition" bpmnElement="Assoc_Anno_Precondition">
+        <di:waypoint x="2100" y="580" />
+        <di:waypoint x="2100" y="660" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Assoc_Anno_Receipt" bpmnElement="Assoc_Anno_Receipt">
+        <di:waypoint x="3900" y="500" />
+        <di:waypoint x="3900" y="450" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="Shape_Participant_ECMR" bpmnElement="Participant_ECMR" isHorizontal="true">
+        <dc:Bounds x="1600" y="980" width="2920" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Edge_DataOut_Task_PreAnnounce_Visit" bpmnElement="DataOut_Task_PreAnnounce_Visit">
+        <di:waypoint x="1356" y="380" />
+        <di:waypoint x="1356" y="600" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_DataOut_Task_MakeAppointment_Visit" bpmnElement="DataOut_Task_MakeAppointment_Visit">
+        <di:waypoint x="1716" y="380" />
+        <di:waypoint x="1716" y="600" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_DataOut_Task_Admit_Visit" bpmnElement="DataOut_Task_Admit_Visit">
+        <di:waypoint x="2436" y="580" />
+        <di:waypoint x="2436" y="600" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_DataOut_Task_RefuseAdmission_Visit" bpmnElement="DataOut_Task_RefuseAdmission_Visit">
+        <di:waypoint x="2436" y="780" />
+        <di:waypoint x="2436" y="820" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_DataOut_Task_Move_Visit" bpmnElement="DataOut_Task_Move_Visit">
+        <di:waypoint x="2616" y="580" />
+        <di:waypoint x="2616" y="600" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_DataOut_Task_RecordCondition_Visit" bpmnElement="DataOut_Task_RecordCondition_Visit">
+        <di:waypoint x="2796" y="580" />
+        <di:waypoint x="2796" y="600" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_DataOut_Task_Reservation_Visit" bpmnElement="DataOut_Task_Reservation_Visit">
+        <di:waypoint x="3336" y="580" />
+        <di:waypoint x="3336" y="600" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_DataOut_Task_ReverseMove_Visit" bpmnElement="DataOut_Task_ReverseMove_Visit">
+        <di:waypoint x="3636" y="780" />
+        <di:waypoint x="3636" y="820" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_DataOut_Task_IssueEir_Visit" bpmnElement="DataOut_Task_IssueEir_Visit">
+        <di:waypoint x="3876" y="580" />
+        <di:waypoint x="3876" y="600" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_DataOut_Task_GateOut_Visit" bpmnElement="DataOut_Task_GateOut_Visit">
+        <di:waypoint x="4056" y="580" />
+        <di:waypoint x="4056" y="600" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Obs_DeliveryPlanned" bpmnElement="Obs_DeliveryPlanned">
+        <di:waypoint x="360" y="150" />
+        <di:waypoint x="360" y="220" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="368" y="178" width="240" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Obs_VisitCompletedEcmr" bpmnElement="Obs_VisitCompletedEcmr">
+        <di:waypoint x="4080" y="900" />
+        <di:waypoint x="4080" y="980" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="4088" y="933" width="240" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Obs_VisitCompleted" bpmnElement="Obs_VisitCompleted">
+        <di:waypoint x="4080" y="220" />
+        <di:waypoint x="4080" y="150" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="4088" y="178" width="240" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="Shape_Task_Subscribe" bpmnElement="Task_Subscribe">
+        <dc:Bounds x="420" y="300" width="120" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_DataRef_Task_Subscribe_Visit" bpmnElement="DataRef_Task_Subscribe_Visit">
+        <dc:Bounds x="428" y="600" width="36" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="472" y="604" width="120" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Edge_DataOut_Task_Subscribe_Visit" bpmnElement="DataOut_Task_Subscribe_Visit">
+        <di:waypoint x="446" y="380" />
+        <di:waypoint x="446" y="600" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="Shape_Task_NotifyDischarge" bpmnElement="Task_NotifyDischarge">
+        <dc:Bounds x="600" y="500" width="120" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_DataRef_Task_NotifyDischarge_Visit" bpmnElement="DataRef_Task_NotifyDischarge_Visit">
+        <dc:Bounds x="608" y="600" width="36" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="652" y="604" width="120" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Edge_DataOut_Task_NotifyDischarge_Visit" bpmnElement="DataOut_Task_NotifyDischarge_Visit">
+        <di:waypoint x="626" y="580" />
+        <di:waypoint x="626" y="600" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="Shape_Task_NotifyRelease" bpmnElement="Task_NotifyRelease">
+        <dc:Bounds x="780" y="500" width="120" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_DataRef_Task_NotifyRelease_Visit" bpmnElement="DataRef_Task_NotifyRelease_Visit">
+        <dc:Bounds x="788" y="600" width="36" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="832" y="604" width="120" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Edge_DataOut_Task_NotifyRelease_Visit" bpmnElement="DataOut_Task_NotifyRelease_Visit">
+        <di:waypoint x="806" y="580" />
+        <di:waypoint x="806" y="600" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_TV_S1" bpmnElement="Flow_TV_S1">
+        <di:waypoint x="540" y="340" />
+        <di:waypoint x="570" y="340" />
+        <di:waypoint x="570" y="540" />
+        <di:waypoint x="600" y="540" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_TV_S2" bpmnElement="Flow_TV_S2">
+        <di:waypoint x="720" y="540" />
+        <di:waypoint x="780" y="540" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_TV_S3" bpmnElement="Flow_TV_S3">
+        <di:waypoint x="900" y="540" />
+        <di:waypoint x="930" y="540" />
+        <di:waypoint x="930" y="340" />
+        <di:waypoint x="960" y="340" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Obs_AppointmentMadeEcmr" bpmnElement="Obs_AppointmentMadeEcmr">
+        <di:waypoint x="1680" y="370" />
+        <di:waypoint x="1660" y="370" />
+        <di:waypoint x="1660" y="980" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1668" y="918" width="180" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn2:definitions>

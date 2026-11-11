@@ -1,0 +1,460 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn2:definitions xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:bpmn2="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="container-import" targetNamespace="http://bpmn.io/schema/bpmn" xsi:schemaLocation="http://www.omg.org/spec/BPMN/20100524/MODEL BPMN20.xsd">
+  <bpmn2:collaboration id="Collaboration_1">
+    <bpmn2:documentation>Hinterland transport of an import container, as one bilateral process between the forwarder and the transport service provider. The transport service provider owns the Container import state, so every state box sits in its lane, including the states the other party causes. A step belongs to the party that takes the action; the owner recording the result is a side effect, not a step. The black-box pools are the processes it hooks into; the message flows mirror the ones drawn in those processes' own BPMNs.</bpmn2:documentation>
+    <bpmn2:participant id="Participant_1" name="Container import" processRef="Process_ContainerImport" />
+    <bpmn2:participant id="Participant_Agency" name="Import agency at destination" />
+    <bpmn2:participant id="Participant_SCR" name="Secure container release" />
+    <bpmn2:participant id="Participant_TerminalVisit" name="Terminal visit" />
+    <bpmn2:participant id="Participant_ECMR" name="eCMR consignment note" />
+    <bpmn2:messageFlow id="Obs_OncarriageBooked" name="Import order [oncarriage booked]" sourceRef="Participant_Agency" targetRef="StartEvent_1" />
+    <bpmn2:messageFlow id="Obs_RightsAssigned" name="Container release right [pickup rights assigned]" sourceRef="Participant_SCR" targetRef="Task_ReceivePickupRight" />
+    <bpmn2:messageFlow id="Obs_TransferToSCR" name="Container import [pickup assigned]" sourceRef="Task_TransferPin" targetRef="Participant_SCR" />
+    <bpmn2:messageFlow id="Obs_DeliveryPlannedToVisit" name="Container import [delivery planned]" sourceRef="Task_PlanDelivery" targetRef="Participant_TerminalVisit" />
+    <bpmn2:messageFlow id="Obs_VisitCompleted" name="Terminal visit [completed]" sourceRef="Participant_TerminalVisit" targetRef="Task_ConfirmPickup" />
+    <bpmn2:messageFlow id="Obs_PickedUpToAgency" name="Container import [picked up]" sourceRef="Task_ConfirmPickup" targetRef="Participant_Agency" />
+    <bpmn2:messageFlow id="Obs_DeliveredToAgency" name="Container import [delivered]" sourceRef="Task_ConfirmDelivery" targetRef="Participant_Agency" />
+    <bpmn2:messageFlow id="Obs_TransportPlanned" name="Container import [transport planned]" sourceRef="Task_PlanTransport" targetRef="Participant_ECMR" />
+    <bpmn2:messageFlow id="Obs_DeliveredToECMR" name="Container import [delivered]" sourceRef="Task_ConfirmDelivery" targetRef="Participant_ECMR" />
+  </bpmn2:collaboration>
+  <bpmn2:process id="Process_ContainerImport" isExecutable="false">
+    <bpmn2:laneSet id="LaneSet_1">
+      <bpmn2:lane id="Lane_Forwarder" name="Forwarder">
+        <bpmn2:flowNodeRef>StartEvent_1</bpmn2:flowNodeRef>
+        <bpmn2:flowNodeRef>Task_SendRequest</bpmn2:flowNodeRef>
+        <bpmn2:flowNodeRef>Gateway_Update</bpmn2:flowNodeRef>
+        <bpmn2:flowNodeRef>Task_SendUpdate</bpmn2:flowNodeRef>
+        <bpmn2:flowNodeRef>Gateway_UpdateJoin</bpmn2:flowNodeRef>
+        <bpmn2:flowNodeRef>Task_CommercialRelease</bpmn2:flowNodeRef>
+        <bpmn2:flowNodeRef>Task_ReceivePickupRight</bpmn2:flowNodeRef>
+        <bpmn2:flowNodeRef>Task_TransferPin</bpmn2:flowNodeRef>
+        <bpmn2:flowNodeRef>Task_Complete</bpmn2:flowNodeRef>
+        <bpmn2:flowNodeRef>EndEvent_1</bpmn2:flowNodeRef>
+      </bpmn2:lane>
+      <bpmn2:lane id="Lane_Transporter" name="Transport service provider">
+        <bpmn2:flowNodeRef>Task_PlanDelivery</bpmn2:flowNodeRef>
+        <bpmn2:flowNodeRef>Task_PlanTransport</bpmn2:flowNodeRef>
+        <bpmn2:flowNodeRef>Task_ConfirmPickup</bpmn2:flowNodeRef>
+        <bpmn2:flowNodeRef>Task_ConfirmDelivery</bpmn2:flowNodeRef>
+      </bpmn2:lane>
+    </bpmn2:laneSet>
+    <bpmn2:startEvent id="StartEvent_1" name="Container import booking" />
+    <bpmn2:task id="Task_SendRequest" name="Send transport request&#10;(B/L details + ETA)">
+      <bpmn2:documentation>Booking sent to the transporter. Carries the full B/L details and the vessel ETA. The transport service provider records the request as a side effect; receiving it is not a step.</bpmn2:documentation>
+      <bpmn2:dataOutputAssociation id="DataOut_Requested">
+        <bpmn2:targetRef>DataRef_Requested</bpmn2:targetRef>
+      </bpmn2:dataOutputAssociation>
+    </bpmn2:task>
+    <bpmn2:exclusiveGateway id="Gateway_Update" name="Booking update?" default="Flow_NoUpdate" />
+    <bpmn2:task id="Task_SendUpdate" name="Send booking update">
+      <bpmn2:dataOutputAssociation id="DataOut_RequestUpdated">
+        <bpmn2:targetRef>DataRef_RequestUpdated</bpmn2:targetRef>
+      </bpmn2:dataOutputAssociation>
+    </bpmn2:task>
+    <bpmn2:exclusiveGateway id="Gateway_UpdateJoin" />
+    <bpmn2:task id="Task_PlanDelivery" name="Plan / book delivery">
+      <bpmn2:dataOutputAssociation id="DataOut_DeliveryPlanned">
+        <bpmn2:targetRef>DataRef_DeliveryPlanned</bpmn2:targetRef>
+      </bpmn2:dataOutputAssociation>
+    </bpmn2:task>
+    <bpmn2:task id="Task_PlanTransport" name="Plan hinterland transport">
+      <bpmn2:documentation>Repeated per leg: a hinterland move can be multi-leg, e.g. barge or rail plus a final road leg.</bpmn2:documentation>
+      <bpmn2:dataOutputAssociation id="DataOut_TransportPlanned">
+        <bpmn2:targetRef>DataRef_TransportPlanned</bpmn2:targetRef>
+      </bpmn2:dataOutputAssociation>
+      <bpmn2:multiInstanceLoopCharacteristics isSequential="true" />
+    </bpmn2:task>
+    <bpmn2:task id="Task_CommercialRelease" name="Commercial release">
+      <bpmn2:dataOutputAssociation id="DataOut_Released">
+        <bpmn2:targetRef>DataRef_Released</bpmn2:targetRef>
+      </bpmn2:dataOutputAssociation>
+    </bpmn2:task>
+    <bpmn2:task id="Task_ReceivePickupRight" name="Receive pickup rights">
+      <bpmn2:documentation>Attachment point to the secure container release chain: the secure release provider notifies the forwarder as first rights holder. Until the pickup rights are actually held, the forwarder has nothing to pass on to the transporter.</bpmn2:documentation>
+      <bpmn2:dataOutputAssociation id="DataOut_PickupRightReceived">
+        <bpmn2:targetRef>DataRef_PickupRightReceived</bpmn2:targetRef>
+      </bpmn2:dataOutputAssociation>
+    </bpmn2:task>
+    <bpmn2:task id="Task_TransferPin" name="Transfer pickup right / PIN">
+      <bpmn2:dataOutputAssociation id="DataOut_PickupAssigned">
+        <bpmn2:targetRef>DataRef_PickupAssigned</bpmn2:targetRef>
+      </bpmn2:dataOutputAssociation>
+    </bpmn2:task>
+    <bpmn2:task id="Task_ConfirmPickup" name="Pickup confirmation">
+      <bpmn2:dataOutputAssociation id="DataOut_PickedUp">
+        <bpmn2:targetRef>DataRef_PickedUp</bpmn2:targetRef>
+      </bpmn2:dataOutputAssociation>
+    </bpmn2:task>
+    <bpmn2:task id="Task_ConfirmDelivery" name="Delivery confirmation">
+      <bpmn2:dataOutputAssociation id="DataOut_Delivered">
+        <bpmn2:targetRef>DataRef_Delivered</bpmn2:targetRef>
+      </bpmn2:dataOutputAssociation>
+    </bpmn2:task>
+    <bpmn2:task id="Task_Complete" name="Complete">
+      <bpmn2:dataOutputAssociation id="DataOut_Completed">
+        <bpmn2:targetRef>DataRef_Completed</bpmn2:targetRef>
+      </bpmn2:dataOutputAssociation>
+    </bpmn2:task>
+    <bpmn2:endEvent id="EndEvent_1" name="Container import completed" />
+    <bpmn2:dataObjectReference id="DataRef_Requested" name="Container import&#10;[requested]" dataObjectRef="DataObject_Import">
+      <bpmn2:dataState id="State_Requested" name="requested" />
+    </bpmn2:dataObjectReference>
+    <bpmn2:dataObjectReference id="DataRef_RequestUpdated" name="Container import&#10;[request-updated]" dataObjectRef="DataObject_Import">
+      <bpmn2:dataState id="State_RequestUpdated" name="request-updated" />
+    </bpmn2:dataObjectReference>
+    <bpmn2:dataObjectReference id="DataRef_DeliveryPlanned" name="Container import&#10;[delivery planned]" dataObjectRef="DataObject_Import">
+      <bpmn2:dataState id="State_DeliveryPlanned" name="delivery planned" />
+    </bpmn2:dataObjectReference>
+    <bpmn2:dataObjectReference id="DataRef_TransportPlanned" name="Container import&#10;[transport planned]" dataObjectRef="DataObject_Import">
+      <bpmn2:dataState id="State_TransportPlanned" name="transport planned" />
+    </bpmn2:dataObjectReference>
+    <bpmn2:dataObjectReference id="DataRef_Released" name="Container import&#10;[released]" dataObjectRef="DataObject_Import">
+      <bpmn2:dataState id="State_Released" name="released" />
+    </bpmn2:dataObjectReference>
+    <bpmn2:dataObjectReference id="DataRef_PickupRightReceived" name="Container import&#10;[pickup rights received]" dataObjectRef="DataObject_Import">
+      <bpmn2:dataState id="State_PickupRightReceived" name="pickup rights received" />
+    </bpmn2:dataObjectReference>
+    <bpmn2:dataObjectReference id="DataRef_PickupAssigned" name="Container import&#10;[pickup assigned]" dataObjectRef="DataObject_Import">
+      <bpmn2:dataState id="State_PickupAssigned" name="pickup assigned" />
+    </bpmn2:dataObjectReference>
+    <bpmn2:dataObjectReference id="DataRef_PickedUp" name="Container import&#10;[picked up]" dataObjectRef="DataObject_Import">
+      <bpmn2:dataState id="State_PickedUp" name="picked up" />
+    </bpmn2:dataObjectReference>
+    <bpmn2:dataObjectReference id="DataRef_Delivered" name="Container import&#10;[delivered]" dataObjectRef="DataObject_Import">
+      <bpmn2:dataState id="State_Delivered" name="delivered" />
+    </bpmn2:dataObjectReference>
+    <bpmn2:dataObjectReference id="DataRef_Completed" name="Container import&#10;[completed]" dataObjectRef="DataObject_Import">
+      <bpmn2:dataState id="State_Completed" name="completed" />
+    </bpmn2:dataObjectReference>
+    <bpmn2:dataObject id="DataObject_Import" name="Container import" />
+    <bpmn2:sequenceFlow id="Flow_01" sourceRef="StartEvent_1" targetRef="Task_SendRequest" />
+    <bpmn2:sequenceFlow id="Flow_02" sourceRef="Task_SendRequest" targetRef="Gateway_Update" />
+    <bpmn2:sequenceFlow id="Flow_Update" name="Yes" sourceRef="Gateway_Update" targetRef="Task_SendUpdate" />
+    <bpmn2:sequenceFlow id="Flow_05" sourceRef="Task_SendUpdate" targetRef="Gateway_UpdateJoin" />
+    <bpmn2:sequenceFlow id="Flow_NoUpdate" name="No" sourceRef="Gateway_Update" targetRef="Gateway_UpdateJoin" />
+    <bpmn2:sequenceFlow id="Flow_08" sourceRef="Gateway_UpdateJoin" targetRef="Task_PlanDelivery" />
+    <bpmn2:sequenceFlow id="Flow_09" sourceRef="Task_PlanDelivery" targetRef="Task_PlanTransport" />
+    <bpmn2:sequenceFlow id="Flow_10" sourceRef="Task_PlanTransport" targetRef="Task_CommercialRelease" />
+    <bpmn2:sequenceFlow id="Flow_11" sourceRef="Task_CommercialRelease" targetRef="Task_ReceivePickupRight" />
+    <bpmn2:sequenceFlow id="Flow_11b" sourceRef="Task_ReceivePickupRight" targetRef="Task_TransferPin" />
+    <bpmn2:sequenceFlow id="Flow_12" sourceRef="Task_TransferPin" targetRef="Task_ConfirmPickup" />
+    <bpmn2:sequenceFlow id="Flow_13" sourceRef="Task_ConfirmPickup" targetRef="Task_ConfirmDelivery" />
+    <bpmn2:sequenceFlow id="Flow_14" sourceRef="Task_ConfirmDelivery" targetRef="Task_Complete" />
+    <bpmn2:sequenceFlow id="Flow_15" sourceRef="Task_Complete" targetRef="EndEvent_1" />
+  </bpmn2:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Collaboration_1">
+      <bpmndi:BPMNShape id="Shape_Participant_1" bpmnElement="Participant_1" isHorizontal="true">
+        <dc:Bounds x="160" y="410" width="2620" height="520" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Lane_Forwarder" bpmnElement="Lane_Forwarder" isHorizontal="true">
+        <dc:Bounds x="190" y="410" width="2590" height="260" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Lane_Transporter" bpmnElement="Lane_Transporter" isHorizontal="true">
+        <dc:Bounds x="190" y="670" width="2590" height="260" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_StartEvent_1" bpmnElement="StartEvent_1">
+        <dc:Bounds x="282" y="552" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="248" y="595" width="104" height="40" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_SendRequest" bpmnElement="Task_SendRequest">
+        <dc:Bounds x="420" y="530" width="120" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Gateway_Update" bpmnElement="Gateway_Update" isMarkerVisible="true">
+        <dc:Bounds x="635" y="545" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="615" y="600" width="90" height="28" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_SendUpdate" bpmnElement="Task_SendUpdate">
+        <dc:Bounds x="780" y="530" width="120" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Gateway_UpdateJoin" bpmnElement="Gateway_UpdateJoin" isMarkerVisible="true">
+        <dc:Bounds x="995" y="545" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_PlanDelivery" bpmnElement="Task_PlanDelivery">
+        <dc:Bounds x="1140" y="710" width="120" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_PlanTransport" bpmnElement="Task_PlanTransport">
+        <dc:Bounds x="1320" y="710" width="120" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_CommercialRelease" bpmnElement="Task_CommercialRelease">
+        <dc:Bounds x="1500" y="530" width="120" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_ReceivePickupRight" bpmnElement="Task_ReceivePickupRight">
+        <dc:Bounds x="1680" y="530" width="120" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_TransferPin" bpmnElement="Task_TransferPin">
+        <dc:Bounds x="1860" y="530" width="120" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_ConfirmPickup" bpmnElement="Task_ConfirmPickup">
+        <dc:Bounds x="2040" y="710" width="120" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_ConfirmDelivery" bpmnElement="Task_ConfirmDelivery">
+        <dc:Bounds x="2220" y="710" width="120" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_Complete" bpmnElement="Task_Complete">
+        <dc:Bounds x="2400" y="530" width="120" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_EndEvent_1" bpmnElement="EndEvent_1">
+        <dc:Bounds x="2622" y="552" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2588" y="595" width="104" height="40" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_DataRef_Requested" bpmnElement="DataRef_Requested">
+        <dc:Bounds x="428" y="835" width="36" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="468" y="843" width="70" height="34" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_DataRef_RequestUpdated" bpmnElement="DataRef_RequestUpdated">
+        <dc:Bounds x="788" y="835" width="36" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="828" y="843" width="70" height="34" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_DataRef_DeliveryPlanned" bpmnElement="DataRef_DeliveryPlanned">
+        <dc:Bounds x="1148" y="835" width="36" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1188" y="843" width="70" height="34" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_DataRef_TransportPlanned" bpmnElement="DataRef_TransportPlanned">
+        <dc:Bounds x="1328" y="835" width="36" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1368" y="843" width="70" height="34" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_DataRef_Released" bpmnElement="DataRef_Released">
+        <dc:Bounds x="1508" y="835" width="36" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1548" y="843" width="70" height="34" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_DataRef_PickupRightReceived" bpmnElement="DataRef_PickupRightReceived">
+        <dc:Bounds x="1688" y="835" width="36" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1728" y="843" width="70" height="34" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_DataRef_PickupAssigned" bpmnElement="DataRef_PickupAssigned">
+        <dc:Bounds x="1868" y="835" width="36" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1908" y="843" width="70" height="34" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_DataRef_PickedUp" bpmnElement="DataRef_PickedUp">
+        <dc:Bounds x="2048" y="835" width="36" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2088" y="843" width="70" height="34" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_DataRef_Delivered" bpmnElement="DataRef_Delivered">
+        <dc:Bounds x="2228" y="835" width="36" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2268" y="843" width="70" height="34" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_DataRef_Completed" bpmnElement="DataRef_Completed">
+        <dc:Bounds x="2408" y="835" width="36" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2448" y="843" width="70" height="34" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Edge_Flow_01" bpmnElement="Flow_01">
+        <di:waypoint x="318" y="570" />
+        <di:waypoint x="420" y="570" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_02" bpmnElement="Flow_02">
+        <di:waypoint x="540" y="570" />
+        <di:waypoint x="635" y="570" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_Update" bpmnElement="Flow_Update">
+        <di:waypoint x="685" y="570" />
+        <di:waypoint x="780" y="570" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="699" y="550" width="22" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_05" bpmnElement="Flow_05">
+        <di:waypoint x="900" y="570" />
+        <di:waypoint x="995" y="570" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_NoUpdate" bpmnElement="Flow_NoUpdate">
+        <di:waypoint x="660" y="545" />
+        <di:waypoint x="660" y="480" />
+        <di:waypoint x="1020" y="480" />
+        <di:waypoint x="1020" y="545" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="666" y="482" width="22" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_08" bpmnElement="Flow_08">
+        <di:waypoint x="1045" y="570" />
+        <di:waypoint x="1092.5" y="570" />
+        <di:waypoint x="1092.5" y="750" />
+        <di:waypoint x="1140" y="750" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_09" bpmnElement="Flow_09">
+        <di:waypoint x="1260" y="750" />
+        <di:waypoint x="1320" y="750" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_10" bpmnElement="Flow_10">
+        <di:waypoint x="1440" y="750" />
+        <di:waypoint x="1470" y="750" />
+        <di:waypoint x="1470" y="570" />
+        <di:waypoint x="1500" y="570" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_11" bpmnElement="Flow_11">
+        <di:waypoint x="1620" y="570" />
+        <di:waypoint x="1680" y="570" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_11b" bpmnElement="Flow_11b">
+        <di:waypoint x="1800" y="570" />
+        <di:waypoint x="1860" y="570" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_12" bpmnElement="Flow_12">
+        <di:waypoint x="1980" y="570" />
+        <di:waypoint x="2010" y="570" />
+        <di:waypoint x="2010" y="750" />
+        <di:waypoint x="2040" y="750" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_13" bpmnElement="Flow_13">
+        <di:waypoint x="2160" y="750" />
+        <di:waypoint x="2220" y="750" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_14" bpmnElement="Flow_14">
+        <di:waypoint x="2340" y="750" />
+        <di:waypoint x="2370" y="750" />
+        <di:waypoint x="2370" y="570" />
+        <di:waypoint x="2400" y="570" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_15" bpmnElement="Flow_15">
+        <di:waypoint x="2520" y="570" />
+        <di:waypoint x="2622" y="570" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_DataOut_Requested" bpmnElement="DataOut_Requested">
+        <di:waypoint x="446" y="610" />
+        <di:waypoint x="446" y="835" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_DataOut_RequestUpdated" bpmnElement="DataOut_RequestUpdated">
+        <di:waypoint x="806" y="610" />
+        <di:waypoint x="806" y="835" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_DataOut_DeliveryPlanned" bpmnElement="DataOut_DeliveryPlanned">
+        <di:waypoint x="1166" y="790" />
+        <di:waypoint x="1166" y="835" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_DataOut_TransportPlanned" bpmnElement="DataOut_TransportPlanned">
+        <di:waypoint x="1346" y="790" />
+        <di:waypoint x="1346" y="835" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_DataOut_Released" bpmnElement="DataOut_Released">
+        <di:waypoint x="1526" y="610" />
+        <di:waypoint x="1526" y="835" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_DataOut_PickupRightReceived" bpmnElement="DataOut_PickupRightReceived">
+        <di:waypoint x="1706" y="610" />
+        <di:waypoint x="1706" y="835" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_DataOut_PickupAssigned" bpmnElement="DataOut_PickupAssigned">
+        <di:waypoint x="1886" y="610" />
+        <di:waypoint x="1886" y="835" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_DataOut_PickedUp" bpmnElement="DataOut_PickedUp">
+        <di:waypoint x="2066" y="790" />
+        <di:waypoint x="2066" y="835" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_DataOut_Delivered" bpmnElement="DataOut_Delivered">
+        <di:waypoint x="2246" y="790" />
+        <di:waypoint x="2246" y="835" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_DataOut_Completed" bpmnElement="DataOut_Completed">
+        <di:waypoint x="2426" y="610" />
+        <di:waypoint x="2426" y="835" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="Shape_Participant_Agency" bpmnElement="Participant_Agency" isHorizontal="true">
+        <dc:Bounds x="160" y="40" width="2620" height="60" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Participant_SCR" bpmnElement="Participant_SCR" isHorizontal="true">
+        <dc:Bounds x="1660" y="280" width="255" height="60" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Participant_TerminalVisit" bpmnElement="Participant_TerminalVisit" isHorizontal="true">
+        <dc:Bounds x="1150" y="160" width="970" height="60" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Participant_ECMR" bpmnElement="Participant_ECMR" isHorizontal="true">
+        <dc:Bounds x="1400" y="1030" width="1060" height="60" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Edge_Obs_OncarriageBooked" bpmnElement="Obs_OncarriageBooked">
+        <di:waypoint x="300" y="100" />
+        <di:waypoint x="300" y="552" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="310" y="112" width="150" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Obs_PickedUpToAgency" bpmnElement="Obs_PickedUpToAgency">
+        <di:waypoint x="2140" y="710" />
+        <di:waypoint x="2140" y="100" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2150" y="112" width="130" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Obs_DeliveredToAgency" bpmnElement="Obs_DeliveredToAgency">
+        <di:waypoint x="2300" y="710" />
+        <di:waypoint x="2300" y="100" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2310" y="112" width="130" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Obs_TransportPlanned" bpmnElement="Obs_TransportPlanned">
+        <di:waypoint x="1410" y="790" />
+        <di:waypoint x="1410" y="815" />
+        <di:waypoint x="1478" y="815" />
+        <di:waypoint x="1478" y="1030" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1488" y="948" width="150" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Obs_DeliveredToECMR" bpmnElement="Obs_DeliveredToECMR">
+        <di:waypoint x="2310" y="790" />
+        <di:waypoint x="2310" y="815" />
+        <di:waypoint x="2378" y="815" />
+        <di:waypoint x="2378" y="1030" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2388" y="948" width="150" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Obs_DeliveryPlannedToVisit" bpmnElement="Obs_DeliveryPlannedToVisit">
+        <di:waypoint x="1200" y="710" />
+        <di:waypoint x="1200" y="220" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1210" y="228" width="160" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Obs_RightsAssigned" bpmnElement="Obs_RightsAssigned">
+        <di:waypoint x="1740" y="340" />
+        <di:waypoint x="1740" y="530" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1612" y="352" width="120" height="40" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Obs_TransferToSCR" bpmnElement="Obs_TransferToSCR">
+        <di:waypoint x="1895" y="530" />
+        <di:waypoint x="1895" y="340" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1765" y="440" width="120" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Obs_VisitCompleted" bpmnElement="Obs_VisitCompleted">
+        <di:waypoint x="2070" y="220" />
+        <di:waypoint x="2070" y="710" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1962" y="440" width="100" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn2:definitions>

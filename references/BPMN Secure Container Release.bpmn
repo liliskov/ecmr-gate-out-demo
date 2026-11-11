@@ -1,0 +1,407 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn2:definitions xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:bpmn2="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:bioc="http://bpmn.io/schema/bpmn/biocolor/1.0" xmlns:color="http://www.omg.org/spec/BPMN/non-normative/color/1.0" id="secure-container-release" targetNamespace="http://bpmn.io/schema/bpmn" xsi:schemaLocation="http://www.omg.org/spec/BPMN/20100524/MODEL BPMN20.xsd">
+  <bpmn2:collaboration id="Collaboration_SCR">
+    <bpmn2:documentation>The secure container release chain, decomposed into bilateral processes. Each pool is one agreement between two parties; the secure release provider is the authoritative owner of the Container release right in both. The pools are not two state machines but two windows onto one - each shows only the actions its counterparty may take, so a pool being small means that party has few rights, not that something is missing. A task is drawn where the initiative lies; the provider applying that action to the record is a side effect and is never a step of its own, which is why its only step is assigning the pickup rights. Every step produces a state. The state objects are drawn in the provider's lane because that is who holds them. The chain ends at representative nominated: at the gate the terminal verifies the pickup rights back-to-back with the provider, under the hood, and no state changes hands - so there is no terminal pool. The full lifecycle, including the closed state that belongs to no agreement, lives in the Container release right lifecycle note.</bpmn2:documentation>
+    <bpmn2:participant id="Participant_Registration" name="1. Container release registration" processRef="Process_ReleaseRegistration" />
+    <bpmn2:participant id="Participant_Transfer" name="2. Release right transfer and pickup assignment" processRef="Process_ReleaseTransfer" />
+  </bpmn2:collaboration>
+  <bpmn2:process id="Process_ReleaseRegistration" isExecutable="false">
+    <bpmn2:laneSet id="LaneSet_P1">
+      <bpmn2:lane id="Lane_P1_Top" name="Ocean carrier">
+        <bpmn2:flowNodeRef>StartEvent_P1</bpmn2:flowNodeRef>
+        <bpmn2:flowNodeRef>Task_P1_Register</bpmn2:flowNodeRef>
+        <bpmn2:flowNodeRef>Task_P1_Release</bpmn2:flowNodeRef>
+        <bpmn2:flowNodeRef>Gateway_P1_Intervention</bpmn2:flowNodeRef>
+        <bpmn2:flowNodeRef>Task_P1_Intervene</bpmn2:flowNodeRef>
+        <bpmn2:flowNodeRef>Gateway_P1_Revoked</bpmn2:flowNodeRef>
+        <bpmn2:flowNodeRef>EndEvent_P1_Revoked</bpmn2:flowNodeRef>
+        <bpmn2:flowNodeRef>EndEvent_P1_Spent</bpmn2:flowNodeRef>
+      </bpmn2:lane>
+      <bpmn2:lane id="Lane_P1_Bottom" name="Secure release provider" />
+    </bpmn2:laneSet>
+    <bpmn2:sequenceFlow id="Flow_P1_01" sourceRef="StartEvent_P1" targetRef="Task_P1_Register" />
+    <bpmn2:sequenceFlow id="Flow_P1_02" sourceRef="Task_P1_Register" targetRef="Task_P1_Release" />
+    <bpmn2:sequenceFlow id="Flow_P1_03" sourceRef="Task_P1_Release" targetRef="Gateway_P1_Intervention" />
+    <bpmn2:sequenceFlow id="Flow_P1_04" name="Yes" sourceRef="Gateway_P1_Intervention" targetRef="Task_P1_Intervene" />
+    <bpmn2:sequenceFlow id="Flow_P1_NoIntervention" name="No" sourceRef="Gateway_P1_Intervention" targetRef="EndEvent_P1_Spent" />
+    <bpmn2:sequenceFlow id="Flow_P1_05" sourceRef="Task_P1_Intervene" targetRef="Gateway_P1_Revoked" />
+    <bpmn2:sequenceFlow id="Flow_P1_06" name="Yes" sourceRef="Gateway_P1_Revoked" targetRef="EndEvent_P1_Revoked" />
+    <bpmn2:sequenceFlow id="Flow_P1_NotRevoked" name="No" sourceRef="Gateway_P1_Revoked" targetRef="Gateway_P1_Intervention" />
+    <bpmn2:startEvent id="StartEvent_P1" name="Import container announced">
+      <bpmn2:documentation>The carrier knows the container is inbound and can open a release record against it. The release conditions are not necessarily met yet - that is what separates registration from the factual release.</bpmn2:documentation>
+    </bpmn2:startEvent>
+    <bpmn2:task id="Task_P1_Register" name="Register container release&#10;(B/L, container, first rights holder)">
+      <bpmn2:documentation>The carrier names the first rights holder: its own nominated haulier under carrier haulage, or the consignee / forwarder under merchant haulage. Replaces the release PIN that used to be e-mailed onward. The record now exists but the right is not yet exercisable.</bpmn2:documentation>
+      <bpmn2:dataOutputAssociation id="DataOut_Task_P1_Register">
+        <bpmn2:targetRef>DataRef_Task_P1_Register</bpmn2:targetRef>
+      </bpmn2:dataOutputAssociation>
+    </bpmn2:task>
+    <bpmn2:task id="Task_P1_Release" name="Release container">
+      <bpmn2:documentation>The factual release, and a separate act from creating the record. Bill of lading surrendered, freight and demurrage settled, no customs or carrier hold outstanding. It can follow registration by days or coincide with it, but only from here is the right exercisable by its holder.</bpmn2:documentation>
+      <bpmn2:dataOutputAssociation id="DataOut_Task_P1_Release">
+        <bpmn2:targetRef>DataRef_Task_P1_Release</bpmn2:targetRef>
+      </bpmn2:dataOutputAssociation>
+    </bpmn2:task>
+    <bpmn2:exclusiveGateway id="Gateway_P1_Intervention" name="Carrier intervention?" default="Flow_P1_NoIntervention" />
+    <bpmn2:task id="Task_P1_Intervene" name="Block / unblock / revoke&#10;release right">
+      <bpmn2:documentation>Raised for unpaid demurrage, a fraud signal, a commercial dispute or a corrected B/L. The provider validates that the requester is the issuing carrier and pushes the resulting state to every party currently authorised to see the right - neither of which is a step of its own. Available for the whole lifetime of the release, which is why this pool loops.</bpmn2:documentation>
+      <bpmn2:dataOutputAssociation id="DataOut_Task_P1_Intervene">
+        <bpmn2:targetRef>DataRef_Task_P1_Intervene</bpmn2:targetRef>
+      </bpmn2:dataOutputAssociation>
+    </bpmn2:task>
+    <bpmn2:exclusiveGateway id="Gateway_P1_Revoked" name="Revoked?" default="Flow_P1_NotRevoked" />
+    <bpmn2:endEvent id="EndEvent_P1_Revoked" name="Release right revoked" />
+    <bpmn2:endEvent id="EndEvent_P1_Spent" name="Carrier control spent">
+      <bpmn2:documentation>Not an action by either party. The carrier's intervention window closes when the right can no longer be moved - the container picked up, or the right revoked above. What happens to the record afterwards is the provider's own business and has no bilateral agreement; see the lifecycle note.</bpmn2:documentation>
+    </bpmn2:endEvent>
+    <bpmn2:dataObjectReference id="DataRef_Task_P1_Register" name="Container release right&#10;[registered]" dataObjectRef="DataObject_Right_P1">
+      <bpmn2:dataState id="State_Task_P1_Register" name="registered" />
+    </bpmn2:dataObjectReference>
+    <bpmn2:dataObjectReference id="DataRef_Task_P1_Release" name="Container release right&#10;[released]" dataObjectRef="DataObject_Right_P1">
+      <bpmn2:dataState id="State_Task_P1_Release" name="released" />
+    </bpmn2:dataObjectReference>
+    <bpmn2:dataObjectReference id="DataRef_Task_P1_Intervene" name="Container release right&#10;[blocked / revoked]" dataObjectRef="DataObject_Right_P1">
+      <bpmn2:dataState id="State_Task_P1_Intervene" name="blocked / revoked" />
+    </bpmn2:dataObjectReference>
+    <bpmn2:dataObject id="DataObject_Right_P1" name="Container release right" />
+    <bpmn2:textAnnotation id="Anno_P1_Release">
+      <bpmn2:text>Registration and release are two acts, not one. The record can sit registered and unusable while a hold, an unpaid invoice or an unsurrendered B/L stands.</bpmn2:text>
+    </bpmn2:textAnnotation>
+    <bpmn2:association id="Assoc_Anno_P1_Release" sourceRef="Task_P1_Release" targetRef="Anno_P1_Release" />
+    <bpmn2:textAnnotation id="Anno_P1_Window">
+      <bpmn2:text>Carrier control survives release and lasts until the container is picked up. This pool is that window, which is why it loops rather than running to a finish.</bpmn2:text>
+    </bpmn2:textAnnotation>
+    <bpmn2:association id="Assoc_Anno_P1_Window" sourceRef="Task_P1_Intervene" targetRef="Anno_P1_Window" />
+    <bpmn2:textAnnotation id="Anno_Legend">
+      <bpmn2:text>Legend for both pools. Lanes show initiative, not work: a task sits with the party that takes the action, and the provider applying it to the record is a side effect that is not drawn. Every step produces a state. The state objects sit in the provider's lane because that is who holds them - which is why the provider has no step at all in 2a. The terminal verifies the pickup rights at the gate back-to-back with the provider, under the hood: no state changes hands, so it has no pool here.</bpmn2:text>
+    </bpmn2:textAnnotation>
+    <bpmn2:association id="Assoc_Anno_Legend" sourceRef="EndEvent_P1_Spent" targetRef="Anno_Legend" />
+  </bpmn2:process>
+  <bpmn2:process id="Process_ReleaseTransfer" isExecutable="false">
+    <bpmn2:laneSet id="LaneSet_P2">
+      <bpmn2:lane id="Lane_P2_Top" name="Secure release provider">
+        <bpmn2:flowNodeRef>StartEvent_P2</bpmn2:flowNodeRef>
+        <bpmn2:flowNodeRef>Task_P2_AssignRights</bpmn2:flowNodeRef>
+      </bpmn2:lane>
+      <bpmn2:lane id="Lane_P2_Bottom" name="Rights holder">
+        <bpmn2:flowNodeRef>Gateway_P2_Transfer</bpmn2:flowNodeRef>
+        <bpmn2:flowNodeRef>Task_P2_Transfer</bpmn2:flowNodeRef>
+        <bpmn2:flowNodeRef>Gateway_P2_Join</bpmn2:flowNodeRef>
+        <bpmn2:flowNodeRef>Task_P2_Assign</bpmn2:flowNodeRef>
+        <bpmn2:flowNodeRef>EndEvent_P2</bpmn2:flowNodeRef>
+      </bpmn2:lane>
+    </bpmn2:laneSet>
+    <bpmn2:sequenceFlow id="Flow_P2_01" sourceRef="StartEvent_P2" targetRef="Task_P2_AssignRights" />
+    <bpmn2:sequenceFlow id="Flow_P2_03" sourceRef="Task_P2_AssignRights" targetRef="Gateway_P2_Transfer" />
+    <bpmn2:sequenceFlow id="Flow_P2_04" name="Yes" sourceRef="Gateway_P2_Transfer" targetRef="Task_P2_Transfer" />
+    <bpmn2:sequenceFlow id="Flow_P2_NoTransfer" name="No" sourceRef="Gateway_P2_Transfer" targetRef="Gateway_P2_Join" />
+    <bpmn2:sequenceFlow id="Flow_P2_05" sourceRef="Task_P2_Transfer" targetRef="Gateway_P2_Join" />
+    <bpmn2:sequenceFlow id="Flow_P2_06" sourceRef="Gateway_P2_Join" targetRef="Task_P2_Assign" />
+    <bpmn2:sequenceFlow id="Flow_P2_07" sourceRef="Task_P2_Assign" targetRef="EndEvent_P2" />
+    <bpmn2:startEvent id="StartEvent_P2" name="Release right released">
+      <bpmn2:documentation>Handover point from process 1. The provider holds a released release right with a named rights holder.</bpmn2:documentation>
+    </bpmn2:startEvent>
+    <bpmn2:task id="Task_P2_AssignRights" name="Assign pickup rights">
+      <bpmn2:documentation>The provider's own act, once the carrier has released the container: it assigns the pickup rights to the first rights holder - the forwarder acting as the consignee's agent, or the consignee itself. Assigned, not offered: there is no acceptance. Only the data the holder needs in order to act - container, terminal, release window, conditions - and not the commercial terms behind the release (design principle 8).</bpmn2:documentation>
+      <bpmn2:dataOutputAssociation id="DataOut_Task_P2_AssignRights">
+        <bpmn2:targetRef>DataRef_Task_P2_AssignRights</bpmn2:targetRef>
+      </bpmn2:dataOutputAssociation>
+    </bpmn2:task>
+    <bpmn2:exclusiveGateway id="Gateway_P2_Transfer" name="Onward transfer?" default="Flow_P2_NoTransfer" />
+    <bpmn2:task id="Task_P2_Transfer" name="Transfer / revoke&#10;release right">
+      <bpmn2:documentation>Carrier haulage: the carrier-appointed haulier transfers to a subcontractor. Merchant haulage: the consignee or forwarder appoints a trucking company. The provider checks that the transferring party is the current holder, re-registers the right and withdraws the previous holder's access - all consequences of this act, not steps beside it. No token changes hands because there is no token. Repeats for every step in the chain, and the holder can revoke a transfer it made.</bpmn2:documentation>
+      <bpmn2:dataOutputAssociation id="DataOut_Task_P2_Transfer">
+        <bpmn2:targetRef>DataRef_Task_P2_Transfer</bpmn2:targetRef>
+      </bpmn2:dataOutputAssociation>
+    </bpmn2:task>
+    <bpmn2:exclusiveGateway id="Gateway_P2_Join" />
+    <bpmn2:task id="Task_P2_Assign" name="Nominate&#10;representative">
+      <bpmn2:documentation>The last rights holder in the chain nominates its representative for the pickup: a concrete driver identity and licence plate. The representative never receives a code: the right stays with the provider and the terminal verifies it against the driver at the gate, under the hood. Can be renominated until the driver is at the gate.</bpmn2:documentation>
+      <bpmn2:dataOutputAssociation id="DataOut_Task_P2_Assign">
+        <bpmn2:targetRef>DataRef_Task_P2_Assign</bpmn2:targetRef>
+      </bpmn2:dataOutputAssociation>
+    </bpmn2:task>
+    <bpmn2:endEvent id="EndEvent_P2" name="Pickup ready">
+      <bpmn2:documentation>The chain's last state is representative nominated. At the gate the terminal verifies the pickup rights back-to-back with the provider, under the hood: no state changes hands, so no further step follows here.</bpmn2:documentation>
+    </bpmn2:endEvent>
+    <bpmn2:dataObjectReference id="DataRef_Task_P2_AssignRights" name="Container release right&#10;[pickup rights assigned]" dataObjectRef="DataObject_Right_P2">
+      <bpmn2:dataState id="State_Task_P2_AssignRights" name="pickup rights assigned" />
+    </bpmn2:dataObjectReference>
+    <bpmn2:dataObjectReference id="DataRef_Task_P2_Transfer" name="Container release right&#10;[transferred]" dataObjectRef="DataObject_Right_P2">
+      <bpmn2:dataState id="State_Task_P2_Transfer" name="transferred" />
+    </bpmn2:dataObjectReference>
+    <bpmn2:dataObjectReference id="DataRef_Task_P2_Assign" name="Container release right&#10;[representative nominated]" dataObjectRef="DataObject_Right_P2">
+      <bpmn2:dataState id="State_Task_P2_Assign" name="representative nominated" />
+    </bpmn2:dataObjectReference>
+    <bpmn2:dataObject id="DataObject_Right_P2" name="Container release right" />
+    <bpmn2:textAnnotation id="Anno_P2_1">
+      <bpmn2:text>The receiving party becomes a rights holder and runs this same bilateral process with the provider. A third-party rights holder is therefore not a separate lane - the process recurses.</bpmn2:text>
+    </bpmn2:textAnnotation>
+    <bpmn2:association id="Assoc_Anno_P2_1" sourceRef="Task_P2_Transfer" targetRef="Anno_P2_1" />
+  </bpmn2:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_SCR">
+    <bpmndi:BPMNPlane id="BPMNPlane_SCR" bpmnElement="Collaboration_SCR">
+      <bpmndi:BPMNShape id="Shape_Participant_Registration" bpmnElement="Participant_Registration" isHorizontal="true">
+        <dc:Bounds x="160" y="80" width="1700" height="520" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Lane_P1_Bottom" bpmnElement="Lane_P1_Bottom" isHorizontal="true">
+        <dc:Bounds x="190" y="340" width="1670" height="260" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Lane_P1_Top" bpmnElement="Lane_P1_Top" isHorizontal="true">
+        <dc:Bounds x="190" y="80" width="1670" height="260" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_StartEvent_P1" bpmnElement="StartEvent_P1">
+        <dc:Bounds x="282" y="222" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="245" y="265" width="110" height="40" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_P1_Register" bpmnElement="Task_P1_Register">
+        <dc:Bounds x="420" y="200" width="120" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_P1_Release" bpmnElement="Task_P1_Release">
+        <dc:Bounds x="600" y="200" width="120" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Gateway_P1_Intervention" bpmnElement="Gateway_P1_Intervention" isMarkerVisible="true">
+        <dc:Bounds x="815" y="215" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="780" y="181" width="120" height="28" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_P1_Intervene" bpmnElement="Task_P1_Intervene">
+        <dc:Bounds x="960" y="200" width="120" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Gateway_P1_Revoked" bpmnElement="Gateway_P1_Revoked" isMarkerVisible="true">
+        <dc:Bounds x="1175" y="215" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1140" y="181" width="120" height="28" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_EndEvent_P1_Revoked" bpmnElement="EndEvent_P1_Revoked">
+        <dc:Bounds x="1322" y="222" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1285" y="265" width="110" height="40" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_EndEvent_P1_Spent" bpmnElement="EndEvent_P1_Spent">
+        <dc:Bounds x="1502" y="222" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1465" y="265" width="110" height="40" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_DataRef_Task_P1_Register" bpmnElement="DataRef_Task_P1_Register">
+        <dc:Bounds x="428" y="505" width="36" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="481" y="513" width="110" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_DataRef_Task_P1_Release" bpmnElement="DataRef_Task_P1_Release">
+        <dc:Bounds x="608" y="505" width="36" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="661" y="513" width="110" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_DataRef_Task_P1_Intervene" bpmnElement="DataRef_Task_P1_Intervene">
+        <dc:Bounds x="968" y="505" width="36" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1021" y="513" width="110" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Anno_P1_Release" bpmnElement="Anno_P1_Release">
+        <dc:Bounds x="480" y="95" width="340" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Anno_P1_Window" bpmnElement="Anno_P1_Window">
+        <dc:Bounds x="900" y="95" width="300" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Anno_Legend" bpmnElement="Anno_Legend">
+        <dc:Bounds x="1300" y="390" width="540" height="140" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Edge_Flow_P1_01" bpmnElement="Flow_P1_01">
+        <di:waypoint x="318" y="240" />
+        <di:waypoint x="420" y="240" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_P1_02" bpmnElement="Flow_P1_02">
+        <di:waypoint x="540" y="240" />
+        <di:waypoint x="600" y="240" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_P1_03" bpmnElement="Flow_P1_03">
+        <di:waypoint x="720" y="240" />
+        <di:waypoint x="815" y="240" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_P1_04" bpmnElement="Flow_P1_04">
+        <di:waypoint x="865" y="240" />
+        <di:waypoint x="960" y="240" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="873" y="220" width="24" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_P1_NoIntervention" bpmnElement="Flow_P1_NoIntervention">
+        <di:waypoint x="840" y="215" />
+        <di:waypoint x="840" y="180" />
+        <di:waypoint x="1520" y="180" />
+        <di:waypoint x="1520" y="222" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="848" y="195" width="24" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_P1_05" bpmnElement="Flow_P1_05">
+        <di:waypoint x="1080" y="240" />
+        <di:waypoint x="1175" y="240" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_P1_06" bpmnElement="Flow_P1_06">
+        <di:waypoint x="1225" y="240" />
+        <di:waypoint x="1322" y="240" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1233" y="220" width="24" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_P1_NotRevoked" bpmnElement="Flow_P1_NotRevoked">
+        <di:waypoint x="1200" y="265" />
+        <di:waypoint x="1200" y="320" />
+        <di:waypoint x="840" y="320" />
+        <di:waypoint x="840" y="265" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1208" y="245" width="24" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Assoc_Anno_P1_Release" bpmnElement="Assoc_Anno_P1_Release">
+        <di:waypoint x="660" y="200" />
+        <di:waypoint x="660" y="165" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Assoc_Anno_P1_Window" bpmnElement="Assoc_Anno_P1_Window">
+        <di:waypoint x="1020" y="200" />
+        <di:waypoint x="1020" y="165" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Assoc_Anno_Legend" bpmnElement="Assoc_Anno_Legend">
+        <di:waypoint x="1520" y="258" />
+        <di:waypoint x="1520" y="390" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="Shape_Participant_Transfer" bpmnElement="Participant_Transfer" isHorizontal="true">
+        <dc:Bounds x="160" y="760" width="1480" height="520" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Lane_P2_Bottom" bpmnElement="Lane_P2_Bottom" isHorizontal="true">
+        <dc:Bounds x="190" y="1020" width="1450" height="260" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Lane_P2_Top" bpmnElement="Lane_P2_Top" isHorizontal="true">
+        <dc:Bounds x="190" y="760" width="1450" height="260" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_StartEvent_P2" bpmnElement="StartEvent_P2">
+        <dc:Bounds x="282" y="902" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="245" y="945" width="110" height="40" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_P2_AssignRights" bpmnElement="Task_P2_AssignRights">
+        <dc:Bounds x="420" y="880" width="120" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Gateway_P2_Transfer" bpmnElement="Gateway_P2_Transfer" isMarkerVisible="true">
+        <dc:Bounds x="815" y="1075" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="780" y="1041" width="120" height="28" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_P2_Transfer" bpmnElement="Task_P2_Transfer">
+        <dc:Bounds x="960" y="1060" width="120" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Gateway_P2_Join" bpmnElement="Gateway_P2_Join" isMarkerVisible="true">
+        <dc:Bounds x="1175" y="1075" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_P2_Assign" bpmnElement="Task_P2_Assign">
+        <dc:Bounds x="1320" y="1060" width="120" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_EndEvent_P2" bpmnElement="EndEvent_P2">
+        <dc:Bounds x="1518" y="1082" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1481" y="1125" width="110" height="40" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_DataRef_Task_P2_AssignRights" bpmnElement="DataRef_Task_P2_AssignRights">
+        <dc:Bounds x="428" y="785" width="36" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="481" y="793" width="110" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_DataRef_Task_P2_Transfer" bpmnElement="DataRef_Task_P2_Transfer">
+        <dc:Bounds x="968" y="785" width="36" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1021" y="793" width="110" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_DataRef_Task_P2_Assign" bpmnElement="DataRef_Task_P2_Assign">
+        <dc:Bounds x="1328" y="785" width="36" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1381" y="793" width="110" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Anno_P2_1" bpmnElement="Anno_P2_1">
+        <dc:Bounds x="900" y="1170" width="300" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Edge_Flow_P2_01" bpmnElement="Flow_P2_01">
+        <di:waypoint x="318" y="920" />
+        <di:waypoint x="420" y="920" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_P2_03" bpmnElement="Flow_P2_03">
+        <di:waypoint x="540" y="920" />
+        <di:waypoint x="677.5" y="920" />
+        <di:waypoint x="677.5" y="1100" />
+        <di:waypoint x="815" y="1100" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_P2_04" bpmnElement="Flow_P2_04">
+        <di:waypoint x="865" y="1100" />
+        <di:waypoint x="960" y="1100" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="873" y="1080" width="24" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_P2_NoTransfer" bpmnElement="Flow_P2_NoTransfer">
+        <di:waypoint x="840" y="1125" />
+        <di:waypoint x="840" y="1250" />
+        <di:waypoint x="1200" y="1250" />
+        <di:waypoint x="1200" y="1125" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="848" y="1105" width="24" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_P2_05" bpmnElement="Flow_P2_05">
+        <di:waypoint x="1080" y="1100" />
+        <di:waypoint x="1175" y="1100" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_P2_06" bpmnElement="Flow_P2_06">
+        <di:waypoint x="1225" y="1100" />
+        <di:waypoint x="1320" y="1100" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_P2_07" bpmnElement="Flow_P2_07">
+        <di:waypoint x="1440" y="1100" />
+        <di:waypoint x="1518" y="1100" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Assoc_Anno_P2_1" bpmnElement="Assoc_Anno_P2_1">
+        <di:waypoint x="1020" y="1140" />
+        <di:waypoint x="1020" y="1170" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_DataOut_Task_P1_Register" bpmnElement="DataOut_Task_P1_Register">
+        <di:waypoint x="446" y="280" />
+        <di:waypoint x="446" y="505" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_DataOut_Task_P1_Release" bpmnElement="DataOut_Task_P1_Release">
+        <di:waypoint x="626" y="280" />
+        <di:waypoint x="626" y="505" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_DataOut_Task_P1_Intervene" bpmnElement="DataOut_Task_P1_Intervene">
+        <di:waypoint x="986" y="280" />
+        <di:waypoint x="986" y="505" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_DataOut_Task_P2_AssignRights" bpmnElement="DataOut_Task_P2_AssignRights">
+        <di:waypoint x="446" y="880" />
+        <di:waypoint x="446" y="835" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_DataOut_Task_P2_Transfer" bpmnElement="DataOut_Task_P2_Transfer">
+        <di:waypoint x="986" y="1060" />
+        <di:waypoint x="986" y="835" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_DataOut_Task_P2_Assign" bpmnElement="DataOut_Task_P2_Assign">
+        <di:waypoint x="1346" y="1060" />
+        <di:waypoint x="1346" y="835" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn2:definitions>

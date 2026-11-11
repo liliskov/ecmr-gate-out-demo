@@ -1,0 +1,13 @@
+@prefix demo: <https://example.org/process-demo#> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+demo:CompletedVisitShape a sh:NodeShape ;
+    sh:targetNode demo:incomingEvent ;
+    sh:property [ sh:path demo:id ; sh:minCount 1 ; sh:datatype xsd:string ; sh:pattern "^[A-Za-z0-9_-]+$" ] ;
+    sh:property [ sh:path demo:type ; sh:hasValue "TerminalVisitCompleted" ] ;
+    sh:property [ sh:path demo:audience ; sh:minCount 1 ; sh:datatype xsd:string ; sh:minLength 1 ] ;
+    sh:property [ sh:path demo:visitId ; sh:minCount 1 ; sh:datatype xsd:string ; sh:minLength 1 ] ;
+    sh:property [ sh:path demo:containerId ; sh:minCount 1 ; sh:datatype xsd:string ; sh:minLength 1 ] ;
+    sh:property [ sh:path demo:gateOutTime ; sh:minCount 1 ; sh:datatype xsd:dateTime ; sh:pattern "Z$" ] ;
+    sh:property [ sh:path demo:receiptRef ; sh:minCount 1 ; sh:datatype xsd:string ; sh:pattern "^urn:ecmr-demo:eir:[A-Za-z0-9_-]+$" ] .

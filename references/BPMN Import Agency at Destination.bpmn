@@ -1,0 +1,437 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn2:definitions xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:bpmn2="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:bioc="http://bpmn.io/schema/bpmn/biocolor/1.0" xmlns:color="http://www.omg.org/spec/BPMN/non-normative/color/1.0" id="import-agency-at-destination" targetNamespace="http://bpmn.io/schema/bpmn" xsi:schemaLocation="http://www.omg.org/spec/BPMN/20100524/MODEL BPMN20.xsd">
+  <bpmn2:collaboration id="Collaboration_Agency">
+    <bpmn2:documentation>Import agency at destination, as one bilateral process between the consignee and the forwarder acting as its agent. The forwarder provides the service and owns the Import order, so every state box sits in its lane. Transport, customs, the terminal and the release chain are black-box participants, not lanes. This is the process through which the pickup rights enter the chain: the release provider assigns them to the forwarder, and every later move - starting with the forwarder to its transport service provider - is a transfer. Sketch; it stops before invoicing.</bpmn2:documentation>
+    <bpmn2:participant id="Participant_Transport" name="Container import transport" />
+    <bpmn2:participant id="Participant_Customs" name="Customs (not modelled yet)" />
+    <bpmn2:participant id="Participant_SCR" name="Secure container release" />
+    <bpmn2:participant id="Participant_Terminal" name="Terminal (discharge and customs status)" />
+    <bpmn2:participant id="Participant_Agency" name="Import agency at destination" processRef="Process_Agency" />
+    <bpmn2:messageFlow id="Obs_OncarriageBooked" name="Import order [oncarriage booked]" sourceRef="Task_BookOncarriage" targetRef="Participant_Transport" />
+    <bpmn2:messageFlow id="Obs_RightsTransferred" name="Import order [pickup rights transferred]" sourceRef="Task_TransferRights" targetRef="Participant_Transport" />
+    <bpmn2:messageFlow id="Obs_PickedUp" name="Container import [picked up]" sourceRef="Participant_Transport" targetRef="Task_PickedUp" />
+    <bpmn2:messageFlow id="Obs_Delivered" name="Container import [delivered]" sourceRef="Participant_Transport" targetRef="Task_Delivered" />
+    <bpmn2:messageFlow id="Obs_CustomsDeclared" name="Import order [customs declared]" sourceRef="Task_DeclareCustoms" targetRef="Participant_Customs" />
+    <bpmn2:messageFlow id="Obs_Discharged" name="container discharged" sourceRef="Participant_Terminal" targetRef="Task_Discharged" />
+    <bpmn2:messageFlow id="Obs_Assigned" name="Container release right [pickup rights assigned]" sourceRef="Participant_SCR" targetRef="Task_CommercialRelease" />
+    <bpmn2:messageFlow id="Obs_CustomsReleased" name="customs released" sourceRef="Participant_Terminal" targetRef="Task_CustomsRelease" />
+  </bpmn2:collaboration>
+  <bpmn2:process id="Process_Agency" isExecutable="false">
+    <bpmn2:laneSet id="LaneSet_Agency">
+      <bpmn2:lane id="Lane_Consignee" name="Consignee">
+        <bpmn2:flowNodeRef>StartEvent_Due</bpmn2:flowNodeRef>
+        <bpmn2:flowNodeRef>Task_RequestService</bpmn2:flowNodeRef>
+      </bpmn2:lane>
+      <bpmn2:lane id="Lane_Forwarder" name="Forwarder (agent at destination)">
+        <bpmn2:flowNodeRef>Task_ReceivePreAdvice</bpmn2:flowNodeRef>
+        <bpmn2:flowNodeRef>Task_DeclareCustoms</bpmn2:flowNodeRef>
+        <bpmn2:flowNodeRef>Task_BookOncarriage</bpmn2:flowNodeRef>
+        <bpmn2:flowNodeRef>Task_Discharged</bpmn2:flowNodeRef>
+        <bpmn2:flowNodeRef>Task_CommercialRelease</bpmn2:flowNodeRef>
+        <bpmn2:flowNodeRef>Task_TransferRights</bpmn2:flowNodeRef>
+        <bpmn2:flowNodeRef>Task_CustomsRelease</bpmn2:flowNodeRef>
+        <bpmn2:flowNodeRef>Task_PickedUp</bpmn2:flowNodeRef>
+        <bpmn2:flowNodeRef>Task_Delivered</bpmn2:flowNodeRef>
+        <bpmn2:flowNodeRef>EndEvent_Delivered</bpmn2:flowNodeRef>
+      </bpmn2:lane>
+    </bpmn2:laneSet>
+    <bpmn2:startEvent id="StartEvent_Due" name="Import shipment due">
+      <bpmn2:documentation>The goods are shipped and the consignee needs a party at destination to clear, release and deliver them.</bpmn2:documentation>
+    </bpmn2:startEvent>
+    <bpmn2:task id="Task_RequestService" name="Request agency&#10;service">
+      <bpmn2:documentation>The consignee appoints the forwarder as its agent at destination for this shipment - customs representation, release and oncarriage - and gives the customs representation mandate. Opens the Import order.</bpmn2:documentation>
+      <bpmn2:dataOutputAssociation id="DataOut_Task_RequestService">
+        <bpmn2:targetRef>DataRef_Task_RequestService</bpmn2:targetRef>
+      </bpmn2:dataOutputAssociation>
+    </bpmn2:task>
+    <bpmn2:receiveTask id="Task_ReceivePreAdvice" name="Receive pre-advice">
+      <bpmn2:documentation>Inbound notification, not an action of this process. The pre-advice itself - B/L, vessel and ETA, commercial documents - from the consignee or its origin agent.</bpmn2:documentation>
+      <bpmn2:dataOutputAssociation id="DataOut_Task_ReceivePreAdvice">
+        <bpmn2:targetRef>DataRef_Task_ReceivePreAdvice</bpmn2:targetRef>
+      </bpmn2:dataOutputAssociation>
+    </bpmn2:receiveTask>
+    <bpmn2:task id="Task_DeclareCustoms" name="Declare to customs">
+      <bpmn2:documentation>Lodged as the consignee's customs representative. Customs is not modelled yet; the release comes back through the terminal, which holds the customs status of the container.</bpmn2:documentation>
+      <bpmn2:dataOutputAssociation id="DataOut_Task_DeclareCustoms">
+        <bpmn2:targetRef>DataRef_Task_DeclareCustoms</bpmn2:targetRef>
+      </bpmn2:dataOutputAssociation>
+    </bpmn2:task>
+    <bpmn2:task id="Task_BookOncarriage" name="Book oncarriage">
+      <bpmn2:documentation>Books hinterland transport with the transport service provider. This is the link into the container import transport process, which observes this state.</bpmn2:documentation>
+      <bpmn2:dataOutputAssociation id="DataOut_Task_BookOncarriage">
+        <bpmn2:targetRef>DataRef_Task_BookOncarriage</bpmn2:targetRef>
+      </bpmn2:dataOutputAssociation>
+    </bpmn2:task>
+    <bpmn2:receiveTask id="Task_Discharged" name="Discharged&#10;at terminal">
+      <bpmn2:documentation>Inbound notification, not an action of this process. Status update from the terminal, which informs the transport service provider as well. Vessel operations are not modelled.</bpmn2:documentation>
+      <bpmn2:dataOutputAssociation id="DataOut_Task_Discharged">
+        <bpmn2:targetRef>DataRef_Task_Discharged</bpmn2:targetRef>
+      </bpmn2:dataOutputAssociation>
+    </bpmn2:receiveTask>
+    <bpmn2:receiveTask id="Task_CommercialRelease" name="Commercial release">
+      <bpmn2:documentation>Inbound notification, not an action of this process. The carrier releases the container, and the secure release provider then assigns the pickup rights to the forwarder as the consignee's agent. Assigned, not offered: there is no accept step. Everything that follows is a transfer.</bpmn2:documentation>
+      <bpmn2:dataOutputAssociation id="DataOut_Task_CommercialRelease">
+        <bpmn2:targetRef>DataRef_Task_CommercialRelease</bpmn2:targetRef>
+      </bpmn2:dataOutputAssociation>
+    </bpmn2:receiveTask>
+    <bpmn2:task id="Task_TransferRights" name="Transfer&#10;pickup rights">
+      <bpmn2:documentation>The forwarder transfers the pickup rights to its transport service provider, which receives them as pickup rights received in the container import transport process. The first transfer in the chain; a sub-haulier would receive the next one the same way.</bpmn2:documentation>
+      <bpmn2:dataOutputAssociation id="DataOut_Task_TransferRights">
+        <bpmn2:targetRef>DataRef_Task_TransferRights</bpmn2:targetRef>
+      </bpmn2:dataOutputAssociation>
+    </bpmn2:task>
+    <bpmn2:receiveTask id="Task_CustomsRelease" name="Customs release">
+      <bpmn2:documentation>Inbound notification, not an action of this process. Status update from the terminal, which holds the customs status of the container and informs the transport service provider as well.</bpmn2:documentation>
+      <bpmn2:dataOutputAssociation id="DataOut_Task_CustomsRelease">
+        <bpmn2:targetRef>DataRef_Task_CustomsRelease</bpmn2:targetRef>
+      </bpmn2:dataOutputAssociation>
+    </bpmn2:receiveTask>
+    <bpmn2:receiveTask id="Task_PickedUp" name="Picked up">
+      <bpmn2:documentation>Inbound notification, not an action of this process. Status update from the transport service provider.</bpmn2:documentation>
+      <bpmn2:dataOutputAssociation id="DataOut_Task_PickedUp">
+        <bpmn2:targetRef>DataRef_Task_PickedUp</bpmn2:targetRef>
+      </bpmn2:dataOutputAssociation>
+    </bpmn2:receiveTask>
+    <bpmn2:receiveTask id="Task_Delivered" name="Delivered">
+      <bpmn2:documentation>Inbound notification, not an action of this process. Status update from the transport service provider. The sketch stops here.</bpmn2:documentation>
+      <bpmn2:dataOutputAssociation id="DataOut_Task_Delivered">
+        <bpmn2:targetRef>DataRef_Task_Delivered</bpmn2:targetRef>
+      </bpmn2:dataOutputAssociation>
+    </bpmn2:receiveTask>
+    <bpmn2:endEvent id="EndEvent_Delivered" name="Delivered -&#10;invoicing follows">
+      <bpmn2:documentation>Invoicing and settlement with the consignee follow, and are not modelled yet.</bpmn2:documentation>
+    </bpmn2:endEvent>
+    <bpmn2:dataObjectReference id="DataRef_Task_RequestService" name="Import order&#10;[requested]" dataObjectRef="DataObject_Order">
+      <bpmn2:dataState id="State_Task_RequestService" name="requested" />
+    </bpmn2:dataObjectReference>
+    <bpmn2:dataObjectReference id="DataRef_Task_ReceivePreAdvice" name="Import order&#10;[pre-advice received]" dataObjectRef="DataObject_Order">
+      <bpmn2:dataState id="State_Task_ReceivePreAdvice" name="pre-advice received" />
+    </bpmn2:dataObjectReference>
+    <bpmn2:dataObjectReference id="DataRef_Task_DeclareCustoms" name="Import order&#10;[customs declared]" dataObjectRef="DataObject_Order">
+      <bpmn2:dataState id="State_Task_DeclareCustoms" name="customs declared" />
+    </bpmn2:dataObjectReference>
+    <bpmn2:dataObjectReference id="DataRef_Task_BookOncarriage" name="Import order&#10;[oncarriage booked]" dataObjectRef="DataObject_Order">
+      <bpmn2:dataState id="State_Task_BookOncarriage" name="oncarriage booked" />
+    </bpmn2:dataObjectReference>
+    <bpmn2:dataObjectReference id="DataRef_Task_Discharged" name="Import order&#10;[discharged]" dataObjectRef="DataObject_Order">
+      <bpmn2:dataState id="State_Task_Discharged" name="discharged" />
+    </bpmn2:dataObjectReference>
+    <bpmn2:dataObjectReference id="DataRef_Task_CommercialRelease" name="Import order&#10;[pickup rights received]" dataObjectRef="DataObject_Order">
+      <bpmn2:dataState id="State_Task_CommercialRelease" name="pickup rights received" />
+    </bpmn2:dataObjectReference>
+    <bpmn2:dataObjectReference id="DataRef_Task_TransferRights" name="Import order&#10;[pickup rights transferred]" dataObjectRef="DataObject_Order">
+      <bpmn2:dataState id="State_Task_TransferRights" name="pickup rights transferred" />
+    </bpmn2:dataObjectReference>
+    <bpmn2:dataObjectReference id="DataRef_Task_CustomsRelease" name="Import order&#10;[customs released]" dataObjectRef="DataObject_Order">
+      <bpmn2:dataState id="State_Task_CustomsRelease" name="customs released" />
+    </bpmn2:dataObjectReference>
+    <bpmn2:dataObjectReference id="DataRef_Task_PickedUp" name="Import order&#10;[picked up]" dataObjectRef="DataObject_Order">
+      <bpmn2:dataState id="State_Task_PickedUp" name="picked up" />
+    </bpmn2:dataObjectReference>
+    <bpmn2:dataObjectReference id="DataRef_Task_Delivered" name="Import order&#10;[delivered]" dataObjectRef="DataObject_Order">
+      <bpmn2:dataState id="State_Task_Delivered" name="delivered" />
+    </bpmn2:dataObjectReference>
+    <bpmn2:dataObject id="DataObject_Order" name="Import order" />
+    <bpmn2:sequenceFlow id="Flow_01" sourceRef="StartEvent_Due" targetRef="Task_RequestService" />
+    <bpmn2:sequenceFlow id="Flow_02" sourceRef="Task_RequestService" targetRef="Task_ReceivePreAdvice" />
+    <bpmn2:sequenceFlow id="Flow_03" sourceRef="Task_ReceivePreAdvice" targetRef="Task_DeclareCustoms" />
+    <bpmn2:sequenceFlow id="Flow_04" sourceRef="Task_DeclareCustoms" targetRef="Task_BookOncarriage" />
+    <bpmn2:sequenceFlow id="Flow_05" sourceRef="Task_BookOncarriage" targetRef="Task_Discharged" />
+    <bpmn2:sequenceFlow id="Flow_06" sourceRef="Task_Discharged" targetRef="Task_CommercialRelease" />
+    <bpmn2:sequenceFlow id="Flow_07" sourceRef="Task_CommercialRelease" targetRef="Task_TransferRights" />
+    <bpmn2:sequenceFlow id="Flow_08" sourceRef="Task_TransferRights" targetRef="Task_CustomsRelease" />
+    <bpmn2:sequenceFlow id="Flow_09" sourceRef="Task_CustomsRelease" targetRef="Task_PickedUp" />
+    <bpmn2:sequenceFlow id="Flow_10" sourceRef="Task_PickedUp" targetRef="Task_Delivered" />
+    <bpmn2:sequenceFlow id="Flow_11" sourceRef="Task_Delivered" targetRef="EndEvent_Delivered" />
+    <bpmn2:textAnnotation id="Anno_Legend">
+      <bpmn2:text>White tasks are actions: the consignee's request and the forwarder's own acts. Grey tasks with an envelope are inbound notifications from another process: control arriving, not an action of this one. All of them change the Import order, which the forwarder owns, so every state box sits in its lane.</bpmn2:text>
+    </bpmn2:textAnnotation>
+    <bpmn2:textAnnotation id="Anno_AssignTransfer">
+      <bpmn2:text>Assign, then transfer. Once the carrier has released, the release provider assigns the pickup rights to the forwarder as the consignee's agent. Everything after is a transfer: forwarder to transport service provider, and on to any sub-haulier. No offer, no accept.</bpmn2:text>
+    </bpmn2:textAnnotation>
+    <bpmn2:association id="Assoc_Anno_AssignTransfer" sourceRef="Task_CommercialRelease" targetRef="Anno_AssignTransfer" />
+  </bpmn2:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_Agency">
+    <bpmndi:BPMNPlane id="BPMNPlane_Agency" bpmnElement="Collaboration_Agency">
+      <bpmndi:BPMNShape id="Shape_Participant_Transport" bpmnElement="Participant_Transport" isHorizontal="true">
+        <dc:Bounds x="160" y="60" width="2260" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Participant_Customs" bpmnElement="Participant_Customs" isHorizontal="true">
+        <dc:Bounds x="600" y="760" width="460" height="60" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Participant_SCR" bpmnElement="Participant_SCR" isHorizontal="true">
+        <dc:Bounds x="1160" y="760" width="440" height="60" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Participant_Terminal" bpmnElement="Participant_Terminal" isHorizontal="true">
+        <dc:Bounds x="160" y="850" width="2260" height="60" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Participant_Agency" bpmnElement="Participant_Agency" isHorizontal="true">
+        <dc:Bounds x="160" y="190" width="2260" height="500" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Lane_Consignee" bpmnElement="Lane_Consignee" isHorizontal="true">
+        <dc:Bounds x="190" y="190" width="2230" height="240" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Lane_Forwarder" bpmnElement="Lane_Forwarder" isHorizontal="true">
+        <dc:Bounds x="190" y="430" width="2230" height="260" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_StartEvent_Due" bpmnElement="StartEvent_Due">
+        <dc:Bounds x="282" y="332" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="248" y="375" width="104" height="40" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_RequestService" bpmnElement="Task_RequestService">
+        <dc:Bounds x="420" y="310" width="120" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_ReceivePreAdvice" bpmnElement="Task_ReceivePreAdvice" bioc:stroke="#8c8c8c" bioc:fill="#f2f2f2" color:background-color="#f2f2f2" color:border-color="#8c8c8c">
+        <dc:Bounds x="600" y="470" width="120" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_DeclareCustoms" bpmnElement="Task_DeclareCustoms">
+        <dc:Bounds x="780" y="470" width="120" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_BookOncarriage" bpmnElement="Task_BookOncarriage">
+        <dc:Bounds x="960" y="470" width="120" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_Discharged" bpmnElement="Task_Discharged" bioc:stroke="#8c8c8c" bioc:fill="#f2f2f2" color:background-color="#f2f2f2" color:border-color="#8c8c8c">
+        <dc:Bounds x="1140" y="470" width="120" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_CommercialRelease" bpmnElement="Task_CommercialRelease" bioc:stroke="#8c8c8c" bioc:fill="#f2f2f2" color:background-color="#f2f2f2" color:border-color="#8c8c8c">
+        <dc:Bounds x="1320" y="470" width="120" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_TransferRights" bpmnElement="Task_TransferRights">
+        <dc:Bounds x="1500" y="470" width="120" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_CustomsRelease" bpmnElement="Task_CustomsRelease" bioc:stroke="#8c8c8c" bioc:fill="#f2f2f2" color:background-color="#f2f2f2" color:border-color="#8c8c8c">
+        <dc:Bounds x="1680" y="470" width="120" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_PickedUp" bpmnElement="Task_PickedUp" bioc:stroke="#8c8c8c" bioc:fill="#f2f2f2" color:background-color="#f2f2f2" color:border-color="#8c8c8c">
+        <dc:Bounds x="1860" y="470" width="120" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_Delivered" bpmnElement="Task_Delivered" bioc:stroke="#8c8c8c" bioc:fill="#f2f2f2" color:background-color="#f2f2f2" color:border-color="#8c8c8c">
+        <dc:Bounds x="2040" y="470" width="120" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_EndEvent_Delivered" bpmnElement="EndEvent_Delivered">
+        <dc:Bounds x="2262" y="492" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2228" y="535" width="104" height="40" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_DataRef_Task_RequestService" bpmnElement="DataRef_Task_RequestService">
+        <dc:Bounds x="428" y="595" width="36" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="468" y="603" width="70" height="34" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_DataRef_Task_ReceivePreAdvice" bpmnElement="DataRef_Task_ReceivePreAdvice">
+        <dc:Bounds x="608" y="595" width="36" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="648" y="603" width="70" height="34" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_DataRef_Task_DeclareCustoms" bpmnElement="DataRef_Task_DeclareCustoms">
+        <dc:Bounds x="788" y="595" width="36" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="828" y="603" width="70" height="34" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_DataRef_Task_BookOncarriage" bpmnElement="DataRef_Task_BookOncarriage">
+        <dc:Bounds x="968" y="595" width="36" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1008" y="603" width="70" height="34" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_DataRef_Task_Discharged" bpmnElement="DataRef_Task_Discharged">
+        <dc:Bounds x="1148" y="595" width="36" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1188" y="603" width="70" height="34" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_DataRef_Task_CommercialRelease" bpmnElement="DataRef_Task_CommercialRelease">
+        <dc:Bounds x="1328" y="595" width="36" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1368" y="603" width="70" height="34" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_DataRef_Task_TransferRights" bpmnElement="DataRef_Task_TransferRights">
+        <dc:Bounds x="1508" y="595" width="36" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1548" y="603" width="70" height="34" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_DataRef_Task_CustomsRelease" bpmnElement="DataRef_Task_CustomsRelease">
+        <dc:Bounds x="1688" y="595" width="36" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1728" y="603" width="70" height="34" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_DataRef_Task_PickedUp" bpmnElement="DataRef_Task_PickedUp">
+        <dc:Bounds x="1868" y="595" width="36" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1908" y="603" width="70" height="34" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_DataRef_Task_Delivered" bpmnElement="DataRef_Task_Delivered">
+        <dc:Bounds x="2048" y="595" width="36" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2088" y="603" width="70" height="34" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Anno_Legend" bpmnElement="Anno_Legend">
+        <dc:Bounds x="590" y="215" width="400" height="115" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Anno_AssignTransfer" bpmnElement="Anno_AssignTransfer">
+        <dc:Bounds x="1050" y="220" width="470" height="110" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Edge_Flow_01" bpmnElement="Flow_01">
+        <di:waypoint x="318" y="350" />
+        <di:waypoint x="420" y="350" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_02" bpmnElement="Flow_02">
+        <di:waypoint x="540" y="350" />
+        <di:waypoint x="570" y="350" />
+        <di:waypoint x="570" y="510" />
+        <di:waypoint x="600" y="510" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_03" bpmnElement="Flow_03">
+        <di:waypoint x="720" y="510" />
+        <di:waypoint x="780" y="510" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_04" bpmnElement="Flow_04">
+        <di:waypoint x="900" y="510" />
+        <di:waypoint x="960" y="510" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_05" bpmnElement="Flow_05">
+        <di:waypoint x="1080" y="510" />
+        <di:waypoint x="1140" y="510" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_06" bpmnElement="Flow_06">
+        <di:waypoint x="1260" y="510" />
+        <di:waypoint x="1320" y="510" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_07" bpmnElement="Flow_07">
+        <di:waypoint x="1440" y="510" />
+        <di:waypoint x="1500" y="510" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_08" bpmnElement="Flow_08">
+        <di:waypoint x="1620" y="510" />
+        <di:waypoint x="1680" y="510" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_09" bpmnElement="Flow_09">
+        <di:waypoint x="1800" y="510" />
+        <di:waypoint x="1860" y="510" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_10" bpmnElement="Flow_10">
+        <di:waypoint x="1980" y="510" />
+        <di:waypoint x="2040" y="510" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_11" bpmnElement="Flow_11">
+        <di:waypoint x="2160" y="510" />
+        <di:waypoint x="2262" y="510" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_DataOut_Task_RequestService" bpmnElement="DataOut_Task_RequestService">
+        <di:waypoint x="446" y="390" />
+        <di:waypoint x="446" y="595" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_DataOut_Task_ReceivePreAdvice" bpmnElement="DataOut_Task_ReceivePreAdvice">
+        <di:waypoint x="626" y="550" />
+        <di:waypoint x="626" y="595" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_DataOut_Task_DeclareCustoms" bpmnElement="DataOut_Task_DeclareCustoms">
+        <di:waypoint x="806" y="550" />
+        <di:waypoint x="806" y="595" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_DataOut_Task_BookOncarriage" bpmnElement="DataOut_Task_BookOncarriage">
+        <di:waypoint x="986" y="550" />
+        <di:waypoint x="986" y="595" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_DataOut_Task_Discharged" bpmnElement="DataOut_Task_Discharged">
+        <di:waypoint x="1166" y="550" />
+        <di:waypoint x="1166" y="595" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_DataOut_Task_CommercialRelease" bpmnElement="DataOut_Task_CommercialRelease">
+        <di:waypoint x="1346" y="550" />
+        <di:waypoint x="1346" y="595" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_DataOut_Task_TransferRights" bpmnElement="DataOut_Task_TransferRights">
+        <di:waypoint x="1526" y="550" />
+        <di:waypoint x="1526" y="595" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_DataOut_Task_CustomsRelease" bpmnElement="DataOut_Task_CustomsRelease">
+        <di:waypoint x="1706" y="550" />
+        <di:waypoint x="1706" y="595" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_DataOut_Task_PickedUp" bpmnElement="DataOut_Task_PickedUp">
+        <di:waypoint x="1886" y="550" />
+        <di:waypoint x="1886" y="595" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_DataOut_Task_Delivered" bpmnElement="DataOut_Task_Delivered">
+        <di:waypoint x="2066" y="550" />
+        <di:waypoint x="2066" y="595" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Assoc_Anno_AssignTransfer" bpmnElement="Assoc_Anno_AssignTransfer">
+        <di:waypoint x="1380" y="470" />
+        <di:waypoint x="1380" y="330" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Obs_OncarriageBooked" bpmnElement="Obs_OncarriageBooked">
+        <di:waypoint x="1020" y="470" />
+        <di:waypoint x="1020" y="130" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1026" y="136" width="150" height="40" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Obs_RightsTransferred" bpmnElement="Obs_RightsTransferred">
+        <di:waypoint x="1560" y="470" />
+        <di:waypoint x="1560" y="130" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1566" y="136" width="150" height="40" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Obs_PickedUp" bpmnElement="Obs_PickedUp">
+        <di:waypoint x="1920" y="130" />
+        <di:waypoint x="1920" y="470" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1926" y="136" width="150" height="40" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Obs_Delivered" bpmnElement="Obs_Delivered">
+        <di:waypoint x="2100" y="130" />
+        <di:waypoint x="2100" y="470" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2106" y="136" width="150" height="40" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Obs_CustomsDeclared" bpmnElement="Obs_CustomsDeclared">
+        <di:waypoint x="900" y="535" />
+        <di:waypoint x="930" y="535" />
+        <di:waypoint x="930" y="760" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="936" y="698" width="120" height="40" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Obs_Discharged" bpmnElement="Obs_Discharged">
+        <di:waypoint x="1110" y="850" />
+        <di:waypoint x="1110" y="535" />
+        <di:waypoint x="1140" y="535" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1116" y="698" width="120" height="40" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Obs_Assigned" bpmnElement="Obs_Assigned">
+        <di:waypoint x="1290" y="760" />
+        <di:waypoint x="1290" y="535" />
+        <di:waypoint x="1320" y="535" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1296" y="698" width="120" height="40" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Obs_CustomsReleased" bpmnElement="Obs_CustomsReleased">
+        <di:waypoint x="1650" y="850" />
+        <di:waypoint x="1650" y="535" />
+        <di:waypoint x="1680" y="535" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1656" y="698" width="120" height="40" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn2:definitions>

@@ -1,0 +1,10 @@
+@prefix odrl: <http://www.w3.org/ns/odrl/2/> .
+
+<urn:ecmr-demo:policy:gate-out> a odrl:Set ;
+    odrl:permission <urn:ecmr-demo:rule:report-takeover> .
+
+<urn:ecmr-demo:rule:report-takeover> a odrl:Permission ;
+    odrl:assigner <urn:ecmr-demo:org:ecmr-provider> ;
+    odrl:assignee <urn:ecmr-demo:org:terminal-a> ;
+    odrl:action odrl:modify ;
+    odrl:target <urn:ecmr-demo:note:ECMR-001> .

@@ -1,0 +1,20 @@
+{
+  "name": "ecmr-gate-out-demo",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "setup": "node setup.mjs",
+    "start": "node server.mjs",
+    "send": "node send.mjs",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "n3": "1.26.0",
+    "odrl-evaluator": "0.6.0",
+    "rdf-validate-shacl": "0.6.5"
+  }
+}
