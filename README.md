@@ -65,3 +65,14 @@ This is a loopback demo with test organisations and one in-memory consignment no
 - Use the W3C specs for the data and permission layers, and the FORCE examples to inspect a policy report. [SHACL](https://www.w3.org/TR/shacl/) · [ODRL](https://www.w3.org/TR/odrl-model/) · [FORCE evaluator](https://github.com/odrl-force/ODRL-Evaluator) · [FORCE demo](https://odrl-force.github.io/ODRL-Evaluator-Demo/)
 - For identity and connectivity, the meeting discussed a federated identity component alongside the connector. [Eclipse IdentityHub](https://github.com/eclipse-edc/IdentityHub) · [DCP](https://github.com/eclipse-dataspace-dcp/decentralized-claims-protocol) · [Dataspace Protocol](https://eclipse-dataspace-protocol-base.github.io/DataspaceProtocol/) · [Eclipse EDC](https://github.com/eclipse-edc/Connector) · [Simpl](https://digital-strategy.ec.europa.eu/en/policies/simpl) · [IDSA](https://internationaldataspaces.org/)
 - The supplied BPMN processes are descriptive models with `isExecutable="false"`. This demo implements one transition based on those models. [Flowable engine](https://github.com/flowable/flowable-engine/tree/main) · [Flowable article](https://www.flowable.com/blog/engineering/bpmn-is-dead-now)
+
+## Attribution
+
+This demonstrator builds on publicly available
+resources from the PILOTS project.
+
+Upstream repository:
+https://github.com/KNowledgeOnWebScale/pilots-demonstrator
+
+Licensed under the MIT License.
+Copyright (c) 2026 KNowledge on Web Scale.
